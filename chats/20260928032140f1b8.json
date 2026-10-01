@@ -1,0 +1,29 @@
+{
+"id": "20260928032140f1b8",
+"title": "Shutdown the system",
+"project": null,
+"created": "2026-09-28T03:21:40",
+"updated": "2026-09-28T03:22:15",
+"messages": [
+{
+"who": "you",
+"text": "shutdown the system",
+"t": "2026-09-28T03:21:49"
+},
+{
+"who": "vega",
+"text": "Shut down your laptop? Unsaved work may be lost.\nSay “yes” to go ahead, or “no” to cancel.",
+"t": "2026-09-28T03:21:49"
+},
+{
+"who": "you",
+"text": "Yes.",
+"t": "2026-09-28T03:22:15"
+},
+{
+"who": "vega",
+"text": "Shutting down in 1 minute. Save your work.\nSay “cancel shutdown” to stop it.",
+"t": "2026-09-28T03:22:15"
+}
+]
+}

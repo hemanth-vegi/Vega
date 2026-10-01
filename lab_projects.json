@@ -1,0 +1,84 @@
+[
+ {
+  "id": "train-vega",
+  "name": "Train Vega",
+  "added": "2026-09-28",
+  "about": "Make a separate, trained Vega model that learns from Gemma's and Qwen's answers. Your Vega app stays exactly as it is, and you switch to the new model only if it turns out better.",
+  "decided": [
+   "She learns her personality, Tenglish replies, simple coding help, and facts about you",
+   "Teachers: Gemma (`gemma3:4b`) answers the chats, Qwen (`qwen2.5-coder:3b`) answers the code",
+   "Training runs free on Google Colab, because your laptop's 4 GB graphics card is too small",
+   "The result is a new model called `vega-trained`. The current Vega and its models don't change",
+   "Only use facts you're OK uploading to Google. Never passwords, Aadhaar or PAN, bank details or OTPs",
+   "Shutdown, WhatsApp calls and other laptop actions stay in Vega's code, not in the trained model"
+  ],
+  "steps": [
+   {
+    "title": "Plan Vega's personality",
+    "steps": [
+     "Make the folder `C:\\CloudLab\\vega-train`",
+     "In Notepad, write `vega_card.txt`: who Vega is, how she talks, and 10 rules",
+     "List facts about you that are safe to upload: studies, goals, routine"
+    ]
+   },
+   {
+    "title": "Write practice questions",
+    "steps": [
+     "25 questions about Vega herself",
+     "25 everyday chats in Tenglish",
+     "25 simple coding questions (Python, C, Linux)",
+     "25 questions about you, from your safe facts list",
+     "Save them all in `questions.txt`"
+    ]
+   },
+   {
+    "title": "Let the teachers answer",
+    "steps": [
+     "Ask Claude for the teacher script when you reach this lesson",
+     "Run it: Gemma answers the chats, Qwen answers the code",
+     "It saves every question and answer in one file"
+    ]
+   },
+   {
+    "title": "Check and fix the answers",
+    "steps": [
+     "Read the answers and fix the Tenglish yourself",
+     "Delete wrong or strange answers",
+     "Keep at least 200 good ones"
+    ]
+   },
+   {
+    "title": "Set up Google Colab",
+    "steps": [
+     "Sign in to colab.research.google.com with your personal Gmail",
+     "Open Unsloth's free fine-tuning notebook (ask Claude for the current link)",
+     "Runtime → Change runtime type → T4 GPU"
+    ]
+   },
+   {
+    "title": "Train Vega",
+    "steps": [
+     "Upload your answers file to Colab",
+     "Run the training cells (about 30 to 60 minutes)",
+     "Save the result as a GGUF file (`q4_k_m`) and download it"
+    ]
+   },
+   {
+    "title": "Run her in Ollama",
+    "steps": [
+     "Put the GGUF file in `C:\\CloudLab\\vega-train` and rename it `vega-trained.gguf`",
+     "Make a file called `Modelfile` with the line `FROM ./vega-trained.gguf`",
+     "`ollama create vega-trained -f Modelfile`, then `ollama run vega-trained`"
+    ]
+   },
+   {
+    "title": "Compare and decide",
+    "steps": [
+     "Ask the old Vega and vega-trained the same 20 questions",
+     "Keep the one that answers better",
+     "Write in your notes what you learned"
+    ]
+   }
+  ]
+ }
+]

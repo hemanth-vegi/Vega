@@ -1,0 +1,148 @@
+2026-10-02 00:48:51,327 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 00:49:19,742 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 00:49:19,955 [INFO] WakeListener started. Enabled: True
+2026-10-02 00:49:19,962 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 00:49:22,053 [INFO] HTTP Request: GET https://huggingface.co/api/agent-harnesses "HTTP/1.1 200 OK"
+2026-10-02 00:49:22,348 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 00:49:37,534 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 00:49:37,762 [INFO] WakeListener started. Enabled: True
+2026-10-02 00:49:37,769 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 00:49:51,178 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 00:49:51,396 [INFO] WakeListener started. Enabled: True
+2026-10-02 00:49:51,409 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 00:49:53,021 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 00:51:32,658 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 00:51:32,895 [INFO] WakeListener started. Enabled: True
+2026-10-02 00:51:32,898 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 00:51:32,903 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 00:51:33,298 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 00:51:34,449 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 00:57:21,111 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 00:57:21,431 [INFO] WakeListener started. Enabled: True
+2026-10-02 00:57:21,433 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 00:57:21,436 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 00:57:21,835 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 00:57:23,277 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 00:57:26,776 [INFO] Toggled microphone listening to: False
+2026-10-02 00:57:26,835 [INFO] Toggled microphone listening to: True
+2026-10-02 01:01:47,847 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:01:48,026 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:01:48,028 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:01:48,028 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:01:48,029 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:01:48,176 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:01:48,177 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:01:48,179 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:01:48,429 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:01:48,581 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:01:49,802 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:05:17,661 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:05:17,915 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:05:17,920 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:05:19,513 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:05:28,592 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:05:28,814 [INFO] VAD filter removed 00:01.512 of audio
+2026-10-02 01:05:31,626 [INFO] Voice command received: 'future perfect'
+2026-10-02 01:05:32,545 [INFO] HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-10-02 01:06:31,833 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:06:31,852 [INFO] VAD filter removed 00:01.352 of audio
+2026-10-02 01:06:47,237 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:06:47,256 [INFO] VAD filter removed 00:01.256 of audio
+2026-10-02 01:06:55,033 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:06:55,050 [INFO] VAD filter removed 00:02.000 of audio
+2026-10-02 01:07:11,637 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:07:11,654 [INFO] VAD filter removed 00:02.456 of audio
+2026-10-02 01:07:16,630 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:07:16,640 [INFO] VAD filter removed 00:01.944 of audio
+2026-10-02 01:10:39,614 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:10:39,809 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:10:39,810 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:10:39,811 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:10:39,814 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:10:39,961 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:10:39,962 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:10:39,965 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:10:40,213 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:10:40,363 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:10:41,332 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:11:45,201 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:11:45,559 [INFO] VAD filter removed 00:02.392 of audio
+2026-10-02 01:11:52,602 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:11:52,644 [INFO] VAD filter removed 00:01.208 of audio
+2026-10-02 01:11:58,602 [INFO] Processing audio with duration 00:03.100
+2026-10-02 01:11:58,630 [INFO] VAD filter removed 00:01.644 of audio
+2026-10-02 01:12:24,695 [INFO] Processing audio with duration 00:04.200
+2026-10-02 01:12:24,732 [INFO] VAD filter removed 00:00.880 of audio
+2026-10-02 01:17:12,798 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:17:12,842 [INFO] VAD filter removed 00:00.648 of audio
+2026-10-02 01:18:07,491 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:18:07,548 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:18:07,552 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:18:08,884 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:18:12,967 [INFO] Toggled microphone listening to: False
+2026-10-02 01:18:13,044 [INFO] Toggled microphone listening to: True
+2026-10-02 01:19:32,084 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:19:32,122 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:19:32,132 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:19:33,393 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:19:36,329 [INFO] Toggled microphone listening to: False
+2026-10-02 01:19:36,339 [INFO] Toggled microphone listening to: True
+2026-10-02 01:21:05,712 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:21:05,751 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:21:05,758 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:21:06,966 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:21:10,962 [INFO] Toggled microphone listening to: False
+2026-10-02 01:21:10,976 [INFO] Toggled microphone listening to: True
+2026-10-02 01:24:29,732 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:24:29,820 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:24:29,939 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:24:29,974 [INFO] Telegram bridge started for phone control
+2026-10-02 01:24:29,975 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:24:29,975 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:24:29,979 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:24:30,004 [INFO] Telegram bridge started for phone control
+2026-10-02 01:24:30,006 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:24:30,009 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:24:30,377 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:24:30,466 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:24:31,784 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:24:45,650 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:24:45,806 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:24:45,824 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 01:24:45,833 [INFO] Telegram bridge started for phone control
+2026-10-02 01:24:45,834 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:24:45,837 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:24:45,976 [INFO] WakeListener started. Enabled: True
+2026-10-02 01:24:46,001 [INFO] Telegram bridge started for phone control
+2026-10-02 01:24:46,003 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 01:24:46,005 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 01:24:46,235 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:24:46,404 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 01:24:47,007 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 01:24:47,065 [INFO] Telegram status: Phone link on: Telegram bot @hemanth_vega_bot
+2026-10-02 01:25:01,566 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:25:02,176 [INFO] VAD filter removed 00:01.992 of audio
+2026-10-02 01:25:07,397 [INFO] Voice command received: 'Google open applock'
+2026-10-02 01:25:21,950 [INFO] Processing audio with duration 00:04.800
+2026-10-02 01:25:21,986 [INFO] VAD filter removed 00:02.544 of audio
+2026-10-02 01:25:26,221 [INFO] Voice command received: 'Vivek open my app lock'
+2026-10-02 01:26:43,862 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:26:43,905 [INFO] VAD filter removed 00:01.800 of audio
+2026-10-02 01:28:33,653 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:28:33,695 [INFO] VAD filter removed 00:01.160 of audio
+2026-10-02 01:28:41,956 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:28:42,000 [INFO] VAD filter removed 00:01.928 of audio
+2026-10-02 01:28:47,758 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:28:47,803 [INFO] VAD filter removed 00:02.472 of audio
+2026-10-02 01:29:29,460 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:29:29,504 [INFO] VAD filter removed 00:01.064 of audio
+2026-10-02 01:30:22,166 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:30:22,211 [INFO] VAD filter removed 00:01.320 of audio
+2026-10-02 01:30:33,967 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:30:34,014 [INFO] VAD filter removed 00:00.256 of audio
+2026-10-02 01:30:46,459 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:30:46,504 [INFO] VAD filter removed 00:01.016 of audio
+2026-10-02 01:32:12,064 [INFO] Processing audio with duration 00:04.500
+2026-10-02 01:32:12,107 [INFO] VAD filter removed 00:01.832 of audio
+2026-10-02 01:32:19,060 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:32:19,105 [INFO] VAD filter removed 00:02.440 of audio

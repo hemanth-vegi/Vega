@@ -1,0 +1,301 @@
+29 Sep 23:09:49  just talk: off (say Hey Vega)
+29 Sep 23:09:49  direct (window open): "close them on"
+29 Sep 23:09:49  command received: "close them on" (locked=False, voice_only=True, busy=False)
+29 Sep 23:09:54  just talk: ON (window open)
+29 Sep 23:10:00  google (1.2s): "close them all"
+29 Sep 23:10:00  command received: "close them all" (locked=False, voice_only=True, busy=False)
+29 Sep 23:10:06  listening: back on, waiting for Hey Vega
+29 Sep 23:10:10  just talk: off (say Hey Vega)
+29 Sep 23:10:20  heard: "Okay." -> ignored (easy)
+29 Sep 23:10:47  heard: "Even though it has such a..." -> ignored (easy)
+29 Sep 23:10:50  heard: "I need to have a look at this." -> ignored (easy)
+29 Sep 23:10:52  heard: "Come to my webcam." -> ignored (easy)
+29 Sep 23:11:00  heard: "I want you to watch your landing technique as an adventure." -> ignored (easy)
+29 Sep 23:11:03  heard: "No." -> ignored (easy)
+29 Sep 23:11:53  heard: "We can't get to it right now while we're getting started." -> ignored (easy)
+29 Sep 23:28:26  autocorrect: "time in close the open tabs" -> "close the open tabs" (fixes: [('time in close', 'close')])
+29 Sep 23:28:43  autocorrect: "close them on" -> "close them all" (fixes: [('close them on', 'close them all')])
+29 Sep 23:28:43  autocorrect: "time in close the open tabs" -> "close the open tabs" (fixes: [('time in close', 'close')])
+29 Sep 23:28:43  autocorrect: "close the mall" -> "close them all" (fixes: [('close the mall', 'close them all')])
+29 Sep 23:30:58  shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar) registered
+29 Sep 23:31:00  speech model 'base.en' ready
+29 Sep 23:31:02  speech model 'small.en' ready
+29 Sep 23:31:09  just talk: ON (window open)
+29 Sep 23:31:14  listening: back on, waiting for Hey Vega
+29 Sep 23:31:25  google (1.1s): "Vega open today's black lock"
+29 Sep 23:31:25  direct (window open): "open today's black lock"
+29 Sep 23:31:25  command received: "open today's black lock" (locked=False, voice_only=True, busy=False)
+29 Sep 23:31:35  listening: back on, waiting for Hey Vega
+29 Sep 23:31:59  google (1.0s): "Vega"
+29 Sep 23:32:04  google (1.1s): "open applock"
+29 Sep 23:32:04  direct (window open): "open applock"
+29 Sep 23:32:04  command received: "open applock" (locked=False, voice_only=True, busy=False)
+29 Sep 23:32:04  autocorrect: "open applock" -> "open lock" (fixes: [('applock', 'lock')])
+29 Sep 23:32:05  just talk: off (say Hey Vega)
+29 Sep 23:32:07  just talk: ON (window open)
+29 Sep 23:32:08  listening: back on, waiting for Hey Vega
+29 Sep 23:32:10  just talk: off (say Hey Vega)
+29 Sep 23:32:23  just talk: ON (window open)
+29 Sep 23:32:34  just talk: off (say Hey Vega)
+29 Sep 23:32:39  listening: back on, waiting for Hey Vega [window not in front]
+29 Sep 23:32:45  just talk: ON (window open)
+29 Sep 23:32:46  listening: back on, waiting for Hey Vega
+29 Sep 23:32:49  just talk: off (say Hey Vega)
+29 Sep 23:33:05  just talk: ON (window open)
+29 Sep 23:33:12  just talk: off (say Hey Vega)
+29 Sep 23:33:18  just talk: ON (window open)
+29 Sep 23:33:28  just talk: off (say Hey Vega)
+29 Sep 23:33:32  just talk: ON (window open)
+29 Sep 23:33:34  just talk: off (say Hey Vega)
+29 Sep 23:33:39  listening: back on, waiting for Hey Vega [window not in front]
+29 Sep 23:33:44  just talk: ON (window open)
+29 Sep 23:33:54  listening: back on, waiting for Hey Vega
+29 Sep 23:34:03  just talk: off (say Hey Vega)
+29 Sep 23:34:08  just talk: ON (window open)
+29 Sep 23:34:10  just talk: off (say Hey Vega)
+29 Sep 23:34:28  just talk: ON (window open)
+29 Sep 23:34:37  listening: PAUSED: another app is using the mic (a call, WhatsApp, a browser tab...)
+29 Sep 23:34:37  just talk: off (say Hey Vega)
+29 Sep 23:34:40  listening: back on, waiting for Hey Vega [window not in front]
+29 Sep 23:35:09  just talk: ON (window open)
+29 Sep 23:35:13  just talk: off (say Hey Vega)
+29 Sep 23:35:19  just talk: ON (window open)
+29 Sep 23:35:20  just talk: off (say Hey Vega)
+29 Sep 23:41:01  just talk: ON (window open)
+29 Sep 23:41:06  just talk: off (say Hey Vega)
+29 Sep 23:42:33  just talk: ON (window open)
+29 Sep 23:42:35  just talk: off (say Hey Vega)
+29 Sep 23:43:12  autocorrect: "open applock" -> "open lock" (fixes: [('applock', 'lock')])
+29 Sep 23:49:49  autocorrect: "open today's black lock" -> "open today's lab log" (fixes: [("today's black lock", "today's lab log")])
+29 Sep 23:49:49  autocorrect: "open applock" -> "open lab log" (fixes: [('applock', 'lab log')])
+29 Sep 23:49:49  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+29 Sep 23:54:01  autocorrect: "open today's black lock" -> "open today's lab log" (fixes: [("today's black lock", "today's lab log")])
+29 Sep 23:54:01  autocorrect: "open applock" -> "open lab log" (fixes: [('applock', 'lab log')])
+29 Sep 23:54:01  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+29 Sep 23:55:13  autocorrect: "open today's black lock" -> "open today's lab log" (fixes: [("today's black lock", "today's lab log")])
+29 Sep 23:55:13  autocorrect: "open applock" -> "open lab log" (fixes: [('applock', 'lab log')])
+29 Sep 23:55:13  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+29 Sep 23:56:15  autocorrect: "open today's black lock" -> "open today's lab log" (fixes: [("today's black lock", "today's lab log")])
+29 Sep 23:56:15  autocorrect: "open applock" -> "open lab log" (fixes: [('applock', 'lab log')])
+29 Sep 23:56:15  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+29 Sep 23:57:24  shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar) registered
+29 Sep 23:57:26  speech model 'base.en' ready
+29 Sep 23:57:27  speech model 'small.en' ready
+29 Sep 23:57:33  just talk: ON (window open)
+29 Sep 23:57:38  listening: back on, waiting for Hey Vega
+29 Sep 23:57:52  google (1.1s): "Sega"
+29 Sep 23:57:57  google (0.7s): "open lab lock"
+29 Sep 23:57:57  direct (window open): "open lab lock"
+29 Sep 23:57:57  command received: "open lab lock" (locked=False, voice_only=True, busy=False)
+29 Sep 23:57:57  autocorrect: "open lab lock" -> "open lab log" (fixes: [('lab lock', 'lab log')])
+29 Sep 23:58:02  listening: back on, waiting for Hey Vega
+29 Sep 23:58:09  google (1.3s): "Rekha"
+29 Sep 23:58:10  direct (window open): "Rekha"
+29 Sep 23:58:10  command received: "Rekha" (locked=False, voice_only=True, busy=False)
+29 Sep 23:58:28  listening: back on, waiting for Hey Vega
+29 Sep 23:58:32  google (0.9s): "smart Rekha"
+29 Sep 23:58:32  direct (window open): "smart Rekha"
+29 Sep 23:58:32  command received: "smart Rekha" (locked=False, voice_only=True, busy=False)
+29 Sep 23:59:02  listening: back on, waiting for Hey Vega
+29 Sep 23:59:11  google (1.4s): "I said hey Vega not smart tracker"
+29 Sep 23:59:11  direct (window open): "I said hey Vega not smart tracker"
+29 Sep 23:59:11  command received: "I said hey Vega not smart tracker" (locked=False, voice_only=True, busy=False)
+29 Sep 23:59:20  just talk: off (say Hey Vega)
+29 Sep 23:59:24  just talk: ON (window open)
+29 Sep 23:59:42  just talk: off (say Hey Vega)
+29 Sep 23:59:43  listening: back on, waiting for Hey Vega [window not in front]
+29 Sep 23:59:54  heard: "Oh my God, oh. That's! That's" -> ignored (easy)
+30 Sep 00:00:11  heard: "Okay, I'm gonna leave you up inside." -> ignored (easy)
+30 Sep 00:00:19  heard: "Hi Vega. Hi Vega." -> WAKE (easy)
+30 Sep 00:00:20  google (0.9s): heard no words
+30 Sep 00:00:20  command: google returned no words, falling back to laptop Whisper model
+30 Sep 00:00:23  command text (2.7s, small.en): "nannagaru, nannagaru, nannagaru,"
+30 Sep 00:00:23  wake: "Hi Vega. Hi Vega." voice 0.31 (you >= 0.28, maybe >= 0.12), second listen "nannagaru, nannagaru, nannagar" not Vega -> WAKE
+30 Sep 00:00:23  command received: "hi vega" (locked=False, voice_only=True, busy=False)
+30 Sep 00:00:44  listening: back on, waiting for Hey Vega [window not in front]
+30 Sep 00:00:55  heard: "So." -> ignored (easy)
+30 Sep 00:01:48  heard: "Liam." -> ignored (easy)
+30 Sep 00:02:23  heard: "God bless you." -> ignored (easy)
+30 Sep 00:02:29  heard: "Part 3 on side." -> ignored (easy)
+30 Sep 00:02:41  heard: "Let's talk more about the Japanese." -> ignored (easy)
+30 Sep 00:02:54  heard: "Vega Vega." -> WAKE (easy)
+30 Sep 00:02:57  wake: "Vega Vega." voice 0.08 (you >= 0.28, maybe >= 0.12), second listen "Please, let's go." not Vega -> ignored
+30 Sep 00:02:58  heard: "It's exactly real." -> ignored (easy)
+30 Sep 00:03:00  heard: "Okay. Yeah. Okay. Yeah. Oh, yeah. Yeah. Yeah. Yeah. Oh, yeah. Yeah. Yeah. Oh," -> ignored (easy)
+30 Sep 00:03:03  heard: "Thank you." -> ignored (easy)
+30 Sep 00:03:15  heard: "Watch." -> ignored (easy)
+30 Sep 00:03:31  heard: "Thank you." -> ignored (easy)
+30 Sep 00:03:38  heard: "I think I may be able to help you." -> ignored (easy)
+30 Sep 00:03:40  heard: "Thank you." -> ignored (easy)
+30 Sep 00:03:46  heard: "Thank you." -> ignored (easy)
+30 Sep 00:03:48  heard: "And I was on a two to five. Yeah." -> ignored (easy)
+30 Sep 00:03:50  heard: "How much do you use?" -> ignored (easy)
+30 Sep 00:03:52  heard: "Awesome." -> ignored (easy)
+30 Sep 00:03:58  heard: "Yeah." -> ignored (easy)
+30 Sep 00:03:59  heard: "I want you to send out the video." -> ignored (easy)
+30 Sep 00:04:00  heard: "What is going on here?" -> ignored (easy)
+30 Sep 00:04:12  heard: "Okay Vega." -> WAKE (easy)
+30 Sep 00:04:15  wake: "Okay Vega." voice 0.35 (you >= 0.28, maybe >= 0.12), second listen "Okay." not Vega -> WAKE
+30 Sep 00:04:15  google (0.4s): heard no words
+30 Sep 00:04:15  command: google returned no words, falling back to laptop Whisper model
+30 Sep 00:04:22  command text (7.2s, small.en): "nannagaru, check."
+30 Sep 00:04:22  command received: "nannagaru, check." (locked=False, voice_only=True, busy=False)
+30 Sep 00:04:23  autocorrect: "nannagaru, check" -> "nannagaru check" (fixes: [('nannagaru,', 'nannagaru')])
+30 Sep 00:04:32  just talk: ON (window open)
+30 Sep 00:04:39  just talk: off (say Hey Vega)
+30 Sep 00:04:45  just talk: ON (window open)
+30 Sep 00:04:47  just talk: off (say Hey Vega)
+30 Sep 00:04:49  listening: back on, waiting for Hey Vega [window not in front]
+30 Sep 00:14:13  autocorrect: "close them on" -> "close them all" (fixes: [('close them on', 'close them all')])
+30 Sep 00:14:13  autocorrect: "time in close the open tabs" -> "close the open tabs" (fixes: [('time in close', 'close')])
+30 Sep 00:14:13  autocorrect: "close the mall" -> "close them all" (fixes: [('close the mall', 'close them all')])
+30 Sep 14:31:05  shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar) registered
+30 Sep 14:31:08  speech model 'base.en' ready
+01 Oct 21:55:33  shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar) registered
+01 Oct 21:55:38  speech model 'base.en' ready
+01 Oct 21:55:41  speech model 'small.en' ready
+01 Oct 21:55:49  just talk: ON (window open)
+01 Oct 21:55:55  listening: back on, waiting for Hey Vega
+01 Oct 21:56:01  just talk: off (say Hey Vega)
+01 Oct 21:56:27  just talk: ON (window open)
+01 Oct 21:57:00  just talk: off (say Hey Vega)
+01 Oct 21:57:09  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 21:57:20  just talk: ON (window open)
+01 Oct 21:57:36  just talk: off (say Hey Vega)
+01 Oct 21:57:42  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 21:57:46  just talk: ON (window open)
+01 Oct 21:57:49  just talk: off (say Hey Vega)
+01 Oct 21:57:53  just talk: ON (window open)
+01 Oct 21:57:55  just talk: off (say Hey Vega)
+01 Oct 22:01:03  just talk: ON (window open)
+01 Oct 22:01:03  just talk: off (say Hey Vega)
+01 Oct 22:01:13  just talk: ON (window open)
+01 Oct 22:01:17  just talk: off (say Hey Vega)
+01 Oct 22:01:26  just talk: ON (window open)
+01 Oct 22:01:33  just talk: off (say Hey Vega)
+01 Oct 22:01:46  just talk: ON (window open)
+01 Oct 22:02:01  just talk: off (say Hey Vega)
+01 Oct 22:02:12  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 22:02:20  just talk: ON (window open)
+01 Oct 22:02:32  just talk: off (say Hey Vega)
+01 Oct 22:02:36  just talk: ON (window open)
+01 Oct 22:02:38  just talk: off (say Hey Vega)
+01 Oct 22:02:45  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 22:09:35  just talk: ON (window open)
+01 Oct 22:09:41  just talk: off (say Hey Vega)
+01 Oct 22:09:59  auto-learned 5 things from a chat
+01 Oct 22:10:19  just talk: ON (window open)
+01 Oct 22:10:48  just talk: off (say Hey Vega)
+01 Oct 22:11:00  just talk: ON (window open)
+01 Oct 22:11:08  just talk: off (say Hey Vega)
+01 Oct 22:11:23  just talk: ON (window open)
+01 Oct 22:11:46  just talk: off (say Hey Vega)
+01 Oct 22:11:58  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 22:12:04  auto-learned 5 things from a chat
+01 Oct 22:12:17  just talk: ON (window open)
+01 Oct 22:12:52  listening: back on, waiting for Hey Vega
+01 Oct 22:12:55  just talk: off (say Hey Vega)
+01 Oct 22:13:04  just talk: ON (window open)
+01 Oct 22:13:07  just talk: off (say Hey Vega)
+01 Oct 22:41:40  shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar) registered
+01 Oct 22:41:42  speech model 'base.en' ready
+01 Oct 22:41:43  speech model 'small.en' ready
+01 Oct 22:41:51  just talk: ON (window open)
+01 Oct 22:41:56  just talk: off (say Hey Vega)
+01 Oct 22:41:56  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 22:43:09  heard: "Hey Vega are you listening?" -> WAKE (easy)
+01 Oct 22:43:10  google (0.9s): "avega are you listening"
+01 Oct 22:43:11  wake: "Hey Vega are you listening?" voice 0.44 (you >= 0.28, maybe >= 0.12), second listen "avega are you listening" OK -> WAKE
+01 Oct 22:43:11  command received: "are you listening" (locked=False, voice_only=True, busy=False)
+01 Oct 22:43:17  listening: back on, waiting for Hey Vega [window not in front]
+01 Oct 22:43:24  heard: "Yep." -> ignored (easy)
+01 Oct 22:43:27  heard: "Other than real." -> ignored (easy)
+01 Oct 22:43:31  just talk: ON (window open)
+01 Oct 22:43:40  google (0.9s): "Vega close all the tabs other than Brave"
+01 Oct 22:43:41  direct (window open): "close all the tabs other than brave"
+01 Oct 22:43:41  command received: "close all the tabs other than brave" (locked=False, voice_only=True, busy=False)
+01 Oct 22:43:52  just talk: off (say Hey Vega)
+01 Oct 22:43:53  just talk: ON (window open)
+01 Oct 22:44:35  listening: back on, waiting for Hey Vega
+01 Oct 22:44:41  google (0.9s): "I am telling you to close"
+01 Oct 22:44:41  direct (window open): "I am telling you to close"
+01 Oct 22:44:41  command received: "I am telling you to close" (locked=False, voice_only=True, busy=False)
+01 Oct 22:45:11  listening: back on, waiting for Hey Vega
+01 Oct 22:45:16  google (0.8s): "I want you to close the tabs"
+01 Oct 22:45:16  direct (window open): "I want you to close the tabs"
+01 Oct 22:45:16  command received: "I want you to close the tabs" (locked=False, voice_only=True, busy=False)
+01 Oct 22:45:41  just talk: off (say Hey Vega)
+01 Oct 22:45:45  just talk: ON (window open)
+01 Oct 22:45:56  just talk: off (say Hey Vega)
+01 Oct 22:45:59  just talk: ON (window open)
+01 Oct 22:46:02  listening: back on, waiting for Hey Vega
+01 Oct 22:46:13  just talk: off (say Hey Vega)
+02 Oct 00:57:50  autocorrect: "open lab lock" -> "open lab log" (fixes: [('lab lock', 'lab log')])
+02 Oct 00:57:50  autocorrect: "open black lock" -> "open lab log" (fixes: [('black lock', 'lab log')])
+02 Oct 00:57:50  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+02 Oct 00:57:50  autocorrect: "open clock" -> "open lock" (fixes: [('clock', 'lock')])
+02 Oct 00:57:50  autocorrect: "close all apps except brave" -> "close all maps excel brave" (fixes: [('apps', 'maps'), ('except', 'excel')])
+02 Oct 00:57:58  autocorrect: "what's my task today" -> "whatsapp my task today" (fixes: [("what's", 'whatsapp')])
+02 Oct 00:57:58  autocorrect: "what's the weather" -> "whatsapp the weather" (fixes: [("what's", 'whatsapp')])
+02 Oct 00:57:59  autocorrect: "remind me in 2 minutes to drink water" -> "remind me in 2 mute to drink weather" (fixes: [('minutes', 'mute'), ('water', 'weather')])
+02 Oct 00:59:41  autocorrect: "what's my task today" -> "whatsapp my task today" (fixes: [("what's", 'whatsapp')])
+02 Oct 00:59:42  autocorrect: "what's the weather" -> "whatsapp the weather" (fixes: [("what's", 'whatsapp')])
+02 Oct 00:59:43  autocorrect: "remind me in 2 minutes to drink water" -> "remind me in 2 mute to drink weather" (fixes: [('minutes', 'mute'), ('water', 'weather')])
+02 Oct 01:02:38  autocorrect: "remind me in 2 minutes to drink water" -> "remind me in 2 mute to drink weather" (fixes: [('minutes', 'mute'), ('water', 'weather')])
+02 Oct 01:02:58  autocorrect: "remind me in 2 minutes to drink water" -> "remind me in 2 mute to drink weather" (fixes: [('minutes', 'mute'), ('water', 'weather')])
+02 Oct 01:04:33  autocorrect: "open lab lock" -> "open lab log" (fixes: [('lab lock', 'lab log')])
+02 Oct 01:04:33  autocorrect: "open black lock" -> "open lab log" (fixes: [('black lock', 'lab log')])
+02 Oct 01:04:33  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+02 Oct 01:05:30  google (1.1s): "future perfect"
+02 Oct 01:05:31  google (0.9s): "future perfect"
+02 Oct 01:05:31  direct (window open): "future perfect"
+02 Oct 01:06:49  google (1.3s): heard no words
+02 Oct 01:06:49  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:06:56  google (0.6s): heard no words
+02 Oct 01:06:56  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:07:14  google (1.5s): heard no words
+02 Oct 01:07:14  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:07:18  google (0.6s): heard no words
+02 Oct 01:07:18  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:11:48  google (0.7s): heard no words
+02 Oct 01:11:48  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:11:55  google (0.7s): heard no words
+02 Oct 01:11:55  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:12:01  google (0.6s): heard no words
+02 Oct 01:12:01  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:12:28  google (1.1s): heard no words
+02 Oct 01:12:28  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:17:27  wake: dropped a guess "Okay." (no speech 0.38, sure -1.06)
+02 Oct 01:17:54  autocorrect: "open lab lock" -> "open lab log" (fixes: [('lab lock', 'lab log')])
+02 Oct 01:17:54  autocorrect: "open black lock" -> "open lab log" (fixes: [('black lock', 'lab log')])
+02 Oct 01:17:54  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+02 Oct 01:19:08  autocorrect: "open lab lock" -> "open lab log" (fixes: [('lab lock', 'lab log')])
+02 Oct 01:19:08  autocorrect: "open black lock" -> "open lab log" (fixes: [('black lock', 'lab log')])
+02 Oct 01:19:08  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+02 Oct 01:20:51  autocorrect: "open lab lock" -> "open lab log" (fixes: [('lab lock', 'lab log')])
+02 Oct 01:20:51  autocorrect: "open black lock" -> "open lab log" (fixes: [('black lock', 'lab log')])
+02 Oct 01:20:51  autocorrect: "open lag log" -> "open lab log" (fixes: [('lag log', 'lab log')])
+02 Oct 01:23:09  autocorrect: "what is a linux file permission in two sentences" -> "what is a linux files permission in two sentences" (fixes: [('file', 'files')])
+02 Oct 01:25:06  google (1.5s): "Google open applock"
+02 Oct 01:25:07  google (1.2s): "Google open applock"
+02 Oct 01:25:07  direct (window open): "Google open applock"
+02 Oct 01:25:07  autocorrect: "google open applock" -> "google open lab log" (fixes: [('applock', 'lab log')])
+02 Oct 01:25:25  google (1.1s): "Vivek open my app lock"
+02 Oct 01:25:26  google (0.9s): "Vivek open my app lock"
+02 Oct 01:25:26  direct (window open): "Vivek open my app lock"
+02 Oct 01:25:26  autocorrect: "open my app lock" -> "open my lab log" (fixes: [('app lock', 'lab log')])
+02 Oct 01:28:39  wake: dropped a guess "I'm not gonna convince you to listen to " (no speech 0.25, sure -1.20)
+02 Oct 01:28:39  wake: dropped a guess "You know what?" (no speech 0.25, sure -1.20)
+02 Oct 01:28:50  google (0.7s): heard no words
+02 Oct 01:28:50  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:29:32  google (0.7s): heard no words
+02 Oct 01:29:32  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:30:25  google (1.0s): heard no words
+02 Oct 01:30:25  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:30:42  wake: dropped a guess "Good evening." (no speech 0.36, sure -1.04)
+02 Oct 01:30:49  google (0.8s): heard no words
+02 Oct 01:30:49  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:32:14  google (0.6s): heard no words
+02 Oct 01:32:14  direct: google heard no words (ambient noise), ignoring
+02 Oct 01:32:21  google (0.7s): heard no words
+02 Oct 01:32:21  direct: google heard no words (ambient noise), ignoring

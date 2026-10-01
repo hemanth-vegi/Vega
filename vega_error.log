@@ -1,0 +1,37 @@
+
+--- 2026-09-29 17:57:15.381326 ---
+Traceback (most recent call last):
+  File "C:\CloudLab\mybot\vega_app.py", line 3185, in main
+    App(root, server)
+    ~~~^^^^^^^^^^^^^^
+  File "C:\CloudLab\mybot\vega_app.py", line 447, in __init__
+    self.build()
+    ~~~~~~~~~~^^
+  File "C:\CloudLab\mybot\vega_app.py", line 568, in build
+    self.sidebar_toggle_btn = tk.Button(top, text="☰", command=self.toggle_sidebar, font=(UI_FONT, 12), bg=C["bg"],
+                                                                ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'App' object has no attribute 'toggle_sidebar'. Did you mean: 'toggle_quickbar'?
+
+--- 2026-09-29 17:57:19.788601 ---
+Traceback (most recent call last):
+  File "C:\CloudLab\mybot\vega_app.py", line 3185, in main
+    App(root, server)
+    ~~~^^^^^^^^^^^^^^
+  File "C:\CloudLab\mybot\vega_app.py", line 447, in __init__
+    self.build()
+    ~~~~~~~~~~^^
+  File "C:\CloudLab\mybot\vega_app.py", line 568, in build
+    self.sidebar_toggle_btn = tk.Button(top, text="☰", command=self.toggle_sidebar, font=(UI_FONT, 12), bg=C["bg"],
+                                                                ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'App' object has no attribute 'toggle_sidebar'. Did you mean: 'toggle_quickbar'?
+
+--- 2026-09-29 17:57:38.011800 ---
+Traceback (most recent call last):
+  File "C:\CloudLab\mybot\vega_app.py", line 3185, in main
+    App(root, server)
+  File "C:\CloudLab\mybot\vega_app.py", line 447, in __init__
+    self.build()
+  File "C:\CloudLab\mybot\vega_app.py", line 568, in build
+    self.sidebar_toggle_btn = tk.Button(top, text="☰", command=self.toggle_sidebar, font=(UI_FONT, 12), bg=C["bg"],
+                                                               ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'App' object has no attribute 'toggle_sidebar'

@@ -1,0 +1,66 @@
+VEGA 2 - SETUP GUIDE
+====================
+
+Everything runs on your laptop. No Claude usage.
+
+PART 1 - INSTALL (one time)
+1. Put all these files in C:\CloudLab\mybot (the same folder as your Modelfile-full).
+2. Double-click "Install Vega.bat". Wait until it says Done, then press any key.
+3. Make sure the Ollama app is running (Start menu -> Ollama).
+4. Double-click "Start Vega.bat". The Vega window opens.
+   If nothing opens, double-click "Start Vega (show errors).bat" and send a screenshot of the error.
+
+PART 2 - MAKE IT EASY TO OPEN
+In the Vega window: Menu -> Create desktop shortcut.
+Menu -> Start with Windows (tick it) so Vega opens by herself every time and your reminders always work.
+
+PART 3 - TALK TO HER
+- Type and press Enter, or press Mic, speak, and stop talking (she stops listening by herself).
+- Tick "Listen for Hey Vega" to talk hands-free: say "Hey Vega", wait for the beep, then speak.
+  Or say it in one go: "Hey Vega, what's the weather?"
+- Say "help" to see every command.
+
+Things to try:
+  what's my task today          weather tomorrow             news / tech news / cricket
+  remind me at 7 pm to call Amma                             remind me in 20 minutes to drink water
+  wake me up at 6 am            my reminders                 cancel reminder Amma
+  add submit lab record for tomorrow   add gym every day   add pay fees on 30 sep
+  my tasks   tomorrow's tasks   mark gym done   delete pay fees
+  open chrome / open youtube    play lofi music              search google for LVM tutorial
+  start my VM / stop my VM      battery / laptop status      lock my laptop
+  open my diary  (talk, then "close diary")                  read my diary yesterday
+  summarize resume  (after putting resume.pdf in the "documents" folder, or use Attach)
+  who is APJ Abdul Kalam        quiz me                      interview me on my resume
+  I finished today's task       my progress                  what did I miss
+  mark week 1 day 3 done        undo today
+  good morning  (weather, task, streak, reminders, news, internships; also by itself at 7:30 AM)
+  internships                   add contact Amma 98765 43210 call Amma on WhatsApp
+
+PART 4 - USE HER FROM YOUR PHONE (Telegram)
+1. Install Telegram on your phone and sign in.
+2. Search for @BotFather (blue tick). Send: /newbot
+3. Give it a name (e.g. Vega) and a username ending in "bot" (e.g. hemanth_vega_bot).
+4. BotFather sends a token like 123456789:AAH.... Copy it.
+5. In the Vega window: Menu -> Connect phone (Telegram)... -> paste the token -> OK.
+6. On your phone, open your new bot and send "hi".
+7. A box appears on the laptop: click Yes.
+Now you can message Vega from your phone (text or voice notes) while the laptop is on.
+Reminders are also sent to your phone.
+Keep the token secret. Don't send passwords or bank details to Vega from your phone.
+
+SETTINGS (Menu -> Edit settings)
+- "city", "latitude", "longitude": your weather place (set to SRM Kattankulathur).
+- "vm_name": your VirtualBox VM (hemanth-server1).
+- "apps" and "sites": add your own, e.g.  "odysseus": "http://127.0.0.1:7000"
+- "speech_rate": -10 slow to 10 fast.
+Save, then Menu -> Quit Vega and open her again.
+
+YOUR FILES (all in this folder, all private on your laptop)
+facts.txt       things you told her to remember
+memory.json     recent chat
+reminders.json  reminders
+todo.json       to-do list
+diary\          one text file per day
+documents\      files you want her to read
+
+The old PowerShell version (assistant.py) still works too.

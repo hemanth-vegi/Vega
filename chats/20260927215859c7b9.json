@@ -1,0 +1,29 @@
+{
+"id": "20260927215859c7b9",
+"title": "Are you ready",
+"project": null,
+"created": "2026-09-27T21:58:59",
+"updated": "2026-09-27T22:01:56",
+"messages": [
+{
+"who": "you",
+"text": "are you ready",
+"t": "2026-09-27T22:00:52"
+},
+{
+"who": "vega",
+"text": "I'm ready, Hemanth! Go ahead and ask me anything, and I'll do my best to help. Whether it's related to your studies, Linux, cloud, or DevOps, or something else entirely, I'm here to assist you. What's on your mind?",
+"t": "2026-09-27T22:01:02"
+},
+{
+"who": "you",
+"text": "telugu",
+"t": "2026-09-27T22:01:30"
+},
+{
+"who": "vega",
+"text": "Nenu vaaraaga! (I'm ready!) Let's chat in Telugu, Hemanth! నీవు ఏ అంశం గురించి చెప్పావో, నేను దానిపై సహాయం చేస్తాను.",
+"t": "2026-09-27T22:01:56"
+}
+]
+}

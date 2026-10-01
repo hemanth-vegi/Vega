@@ -1,0 +1,40 @@
+{
+"id": "20261002005724bfe3",
+"title": "DevOps Studies",
+"project": null,
+"created": "2026-10-02T00:57:24",
+"updated": "2026-10-02T01:25:26",
+"messages": [
+{
+"who": "you",
+"text": "future perfect",
+"t": "2026-10-02T01:05:31"
+},
+{
+"who": "vega",
+"text": "Future Perfect tense chala easy bro! Action oka specific time kalla complete aipotundi ani cheppadaniki idi vadutam.\n\n**Formula:** \nSubject + will have + past participle ($V_3$ verb)\n\n**Examples:**\n- By December, **I will have secured** my internship. (Idi manaki chala important goal!)\n- By tomorrow evening, **she will have completed** her project.\n\nInterviewer-style test kosam oka question: **\"By next year, I ___ (learn) advanced Python.\"** Blank lo correct tense endi?",
+"t": "2026-10-02T01:05:34"
+},
+{
+"who": "you",
+"text": "Google open applock",
+"t": "2026-10-02T01:25:07"
+},
+{
+"who": "vega",
+"text": "Searching Google for: open lab log",
+"t": "2026-10-02T01:25:08"
+},
+{
+"who": "you",
+"text": "Vivek open my app lock",
+"t": "2026-10-02T01:25:26"
+},
+{
+"who": "vega",
+"text": "Opening your Lab Log.",
+"t": "2026-10-02T01:25:26"
+}
+],
+"pinned": true
+}

@@ -1,0 +1,9 @@
+{
+ "pin_salt": "c43129882dcc360c95f4cee8a010c042",
+ "pin_hash": "800743d3879494b5b5f7bc1a8e7349eed580b0522e541df57d1ee3479b3c8ef5",
+ "lock_minutes": 30,
+ "voice_only": true,
+ "voice_threshold": 0.28,
+ "voice_unlock_threshold": 0.32,
+ "manual_levels": true
+}

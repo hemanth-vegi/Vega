@@ -1,0 +1,64 @@
+VEGA VOICE REPORT  26 Sep 2026 11:58 PM
+
+whisper_model: medium.en
+wake_model: base.en
+wake_strictness: very_easy
+understand_telugu: True
+telugu_model: medium
+voice_language: auto
+speak_telugu: False
+voice_on: True
+wake_word_on: True
+pause_on_calls: True
+speak answers ticked: True   listen for hey vega ticked: True
+only obey my voice: True  command level: 0.21
+learned wake words: vega
+
+Windows voice test: ok
+Hemanth heard it: True
+
+Try 1: mic level 0.027  lang en  voice match 0.47
+   with hint: Hey Vega. What's the time?
+   no hint:   Here we go. What's the time?
+   full:      Hey Vega, what's the time?
+Try 2: mic level 0.026  lang te  voice match 0.42
+   with hint: Hey Vega. What time is it?
+   no hint:   Here we go. What time is it?
+   full:      Hey Vega, what time is it?
+Try 3: mic level 0.026  lang en  voice match 0.37
+   with hint: Here we go.
+   no hint:   Here we go.
+   full:      Hey Vega.
+'Hey Vega' caught at normal: 0 of 3
+'Hey Vega' caught at easy: 2 of 3
+'Hey Vega' caught at very_easy: 2 of 3
+
+FIXES / TIPS:
+- I set Hey Vega sensitivity to “easy”, the strictest level that still catches you.
+
+--- last lines of voice_log.txt ---
+26 Sep 23:52:35  heard: “Here we go.” -> ignored (very_easy)
+26 Sep 23:52:42  heard: “Here we go.” -> ignored (very_easy)
+26 Sep 23:52:46  heard: “Here we go.” -> ignored (very_easy)
+26 Sep 23:54:20  heard: “Here Vega.” -> WAKE (very_easy)
+26 Sep 23:54:32  command text (8.8s, medium): “Here we go.”
+26 Sep 23:54:32  command received: “Here we go.” (locked=False, voice_only=True, busy=False)
+26 Sep 23:54:52  command received: “Hey Vega, I am dying, call someone.” (locked=False, voice_only=True, busy=False)
+26 Sep 23:55:09  heard: “Here Vega.” -> WAKE (very_easy)
+26 Sep 23:55:25  command text (10.0s, medium): “Hey Vega.”
+26 Sep 23:55:26  command received: “Hey Vega.” (locked=False, voice_only=True, busy=False)
+26 Sep 23:55:26  heard: “Here Vega.” -> WAKE (very_easy)
+26 Sep 23:55:43  heard: “Here we go.” -> ignored (very_easy)
+26 Sep 23:55:51  heard: “Here Vega.” -> WAKE (very_easy)
+26 Sep 23:56:04  command text (9.2s, medium): “Open Brave”
+26 Sep 23:56:04  command received: “Open Brave” (locked=False, voice_only=True, busy=False)
+26 Sep 23:56:11  heard: “Here Vega.” -> WAKE (very_easy)
+26 Sep 23:56:25  command text (8.8s, medium): “Open Chrome”
+26 Sep 23:56:25  command received: “Open Chrome” (locked=False, voice_only=True, busy=False)
+26 Sep 23:56:30  heard: “Hey Vega.” -> WAKE (very_easy)
+26 Sep 23:56:43  command text (8.9s, medium): “Open it.”
+26 Sep 23:56:43  command received: “Open it.” (locked=False, voice_only=True, busy=False)
+26 Sep 23:56:53  heard: “Open Microsoft. Here Vega.” -> ignored (very_easy)
+26 Sep 23:56:59  heard: “Hey Vega.” -> WAKE (very_easy)
+26 Sep 23:57:12  command text (9.3s, medium): “OpenMicrosoft Edge”
+26 Sep 23:57:12  command received: “OpenMicrosoft Edge” (locked=False, voice_only=True, busy=False)

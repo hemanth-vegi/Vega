@@ -1,0 +1,19 @@
+{
+"id": "20261002002359afbb",
+"title": "What is my Lab Log task for today?",
+"project": null,
+"created": "2026-10-02T00:23:59",
+"updated": "2026-10-02T00:23:59",
+"messages": [
+{
+"who": "you",
+"text": "What is my Lab Log task for today?",
+"t": "2026-10-02T00:23:59"
+},
+{
+"who": "vega",
+"text": "Today: Week 2, Day 3 (Users, groups & sudo), Fri 02 Oct\n  Passwords and ageing\n  1. Set a password for each user with `sudo passwd`\n  2. `sudo chage -l ravi`\n  3. `sudo chage -d 0 ravi` to force a change\n  4. Log in as ravi and see the forced change\nWhen you finish, say: I finished today's task.\n\nPython today (W1 L2, about 40 min): Variables and input\n  1. `name = input(\"Your name: \")` then `print(\"Hi\", name)`\n  2. `age = int(input(\"Age: \"))` then `print(age + 1)` (int() turns text into a number)\n  3. Save as `about_me.py` and run it with F5",
+"t": "2026-10-02T00:23:59"
+}
+]
+}

@@ -1,0 +1,10 @@
+ollama
+faster-whisper
+sounddevice
+numpy
+requests
+psutil
+pypdf
+python-docx
+SpeechRecognition
+edge-tts
