@@ -853,6 +853,34 @@ def client_debug_log():
     return json.dumps({"ok": True})
 
 
+@route("/api/selftest", method="GET")
+def self_test():
+    import traceback
+    results = []
+    log_path = os.path.join(BASE_DIR, "logs", "selftest.txt")
+    os.makedirs(os.path.join(BASE_DIR, "logs"), exist_ok=True)
+
+    def check(name, fn):
+        try:
+            fn()
+            results.append({"name": name, "status": "PASS"})
+        except Exception as e:
+            results.append({"name": name, "status": "FAIL", "error": str(e)})
+
+    check("chats_list", lambda: store.list_chats())
+    check("lablog_load", lambda: read_json(os.path.join(BASE_DIR, "lablog.json")))
+
+    with open(log_path, "w", encoding="utf-8") as f:
+        for r in results:
+            status = "PASS" if r["status"] == "PASS" else "FAIL"
+            err = (" - " + r.get("error", "")) if r.get("error") else ""
+            f.write(status + ": " + r["name"] + err + "\n")
+
+    log_debug("Self-test: " + str(sum(1 for r in results if r["status"] == "PASS")) + "/" + str(len(results)) + " PASS")
+    return json.dumps({"ok": True, "results": results})
+
+
+
 def find_browser_exe():
     """Find Edge, Brave, or Chrome for frameless desktop app mode."""
     candidates = [
@@ -889,7 +917,10 @@ def main():
             "--window-size=1260,840",
             "--window-position=100,50",
             "--enable-logging=stderr",
-            "--v=1"
+            "--v=1",
+            "--disable-application-cache",
+            "--disable-cache",
+            "--aggressive-cache-discard"
         ]
         p = subprocess.Popen(args)
         p.wait()

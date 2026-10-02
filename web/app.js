@@ -1038,6 +1038,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+
+  // Self-Test Button
+  const runSelftestBtn = document.getElementById("run-selftest-btn");
+  if (runSelftestBtn) {
+    runSelftestBtn.addEventListener("click", () => {
+      const resultsDiv = document.getElementById("selftest-results");
+      runSelftestBtn.textContent = "Running...";
+      runSelftestBtn.disabled = true;
+      resultsDiv.style.display = "block";
+      resultsDiv.textContent = "Running self-test...";
+      fetch("/api/selftest")
+        .then(r => r.json())
+        .then(data => {
+          runSelftestBtn.textContent = "Run Self-Test";
+          runSelftestBtn.disabled = false;
+          if (!data || !data.results) {
+            resultsDiv.textContent = "ERROR: No results returned";
+            return;
+          }
+          let html = "";
+          let pass = 0, fail = 0;
+          data.results.forEach(r => {
+            const ok = r.status === "PASS";
+            if (ok) pass++; else fail++;
+            const color = ok ? "#4ade80" : "#f87171";
+            const err = r.error ? " - " + r.error : "";
+            html += "<div style=\"color:" + color + "\">" + (ok ? "PASS" : "FAIL") + ": " + r.name + err + "</div>";
+          });
+          html += "<div style=\"margin-top:6px;color:#888\">Result: " + pass + "/" + (pass+fail) + " PASS - saved to logs/selftest.txt</div>";
+          resultsDiv.innerHTML = html;
+        })
+        .catch(err => {
+          runSelftestBtn.textContent = "Run Self-Test";
+          runSelftestBtn.disabled = false;
+          resultsDiv.textContent = "ERROR: " + err.message;
+        });
+    });
+  }
+
   // Theme Toggle
   themeToggle.addEventListener("click", () => {
     document.body.classList.toggle("light-theme");
