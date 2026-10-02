@@ -501,3 +501,37 @@
 2026-10-02 13:32:02,813 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
 2026-10-02 13:32:04,006 [INFO] Telegram status: Phone link on: Telegram bot @hemanth_vega_bot
 2026-10-02 13:32:04,387 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 13:37:18,751 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 13:37:18,965 [INFO] WakeListener started. Enabled: True
+2026-10-02 13:37:19,003 [INFO] Telegram bridge started for phone control
+2026-10-02 13:37:19,005 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 13:37:19,007 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 13:37:19,406 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 13:37:20,811 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 13:37:25,060 [INFO] Telegram status: Phone link on: Telegram bot @hemanth_vega_bot
+2026-10-02 13:38:03,584 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 13:38:03,838 [INFO] WakeListener started. Enabled: True
+2026-10-02 13:38:03,886 [INFO] Telegram bridge started for phone control
+2026-10-02 13:38:03,888 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 13:38:03,892 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 13:38:04,291 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 13:38:05,336 [INFO] Telegram status: Phone link on: Telegram bot @hemanth_vega_bot
+2026-10-02 13:38:05,690 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 13:38:09,389 [INFO] Self-test: 0/2 PASS
+2026-10-02 13:38:33,927 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 13:38:34,171 [INFO] WakeListener started. Enabled: True
+2026-10-02 13:38:34,209 [INFO] Telegram bridge started for phone control
+2026-10-02 13:38:34,214 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 13:38:34,219 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 13:38:34,617 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 13:38:35,859 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 13:38:38,698 [INFO] Self-test: 0/2 PASS
+2026-10-02 13:39:11,525 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 13:39:11,749 [INFO] WakeListener started. Enabled: True
+2026-10-02 13:39:11,790 [INFO] Telegram bridge started for phone control
+2026-10-02 13:39:11,791 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 13:39:11,794 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 13:39:12,193 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 13:39:13,014 [INFO] Telegram status: Phone link on: Telegram bot @hemanth_vega_bot
+2026-10-02 13:39:13,506 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 13:39:19,312 [INFO] Self-test: 2/2 PASS

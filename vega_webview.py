@@ -867,8 +867,8 @@ def self_test():
         except Exception as e:
             results.append({"name": name, "status": "FAIL", "error": str(e)})
 
-    check("chats_list", lambda: store.list_chats())
-    check("lablog_load", lambda: read_json(os.path.join(BASE_DIR, "lablog.json")))
+    check("chats_list", lambda: store.all())
+    check("lablog_load", lambda: read_json(os.path.join(BASE_DIR, "lablog.json"), {}))
 
     with open(log_path, "w", encoding="utf-8") as f:
         for r in results:
