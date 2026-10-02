@@ -146,3 +146,72 @@
 2026-10-02 01:32:12,107 [INFO] VAD filter removed 00:01.832 of audio
 2026-10-02 01:32:19,060 [INFO] Processing audio with duration 00:05.000
 2026-10-02 01:32:19,105 [INFO] VAD filter removed 00:02.440 of audio
+2026-10-02 01:39:43,066 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:39:43,109 [INFO] VAD filter removed 00:01.736 of audio
+2026-10-02 01:40:56,658 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:40:56,701 [INFO] VAD filter removed 00:00.760 of audio
+2026-10-02 01:41:11,258 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:41:11,300 [INFO] VAD filter removed 00:01.192 of audio
+2026-10-02 01:41:36,957 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:41:36,999 [INFO] VAD filter removed 00:00.408 of audio
+2026-10-02 01:41:56,902 [INFO] Telegram status: Phone link waiting for internet connection, retrying...
+2026-10-02 01:43:36,860 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:43:36,902 [INFO] VAD filter removed 00:01.320 of audio
+2026-10-02 01:44:08,858 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:44:08,900 [INFO] VAD filter removed 00:01.288 of audio
+2026-10-02 01:44:14,158 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:44:14,201 [INFO] VAD filter removed 00:01.784 of audio
+2026-10-02 01:45:30,861 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:45:30,904 [INFO] VAD filter removed 00:01.048 of audio
+2026-10-02 01:45:40,969 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:45:41,009 [INFO] VAD filter removed 00:00.712 of audio
+2026-10-02 01:45:47,239 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:45:47,279 [INFO] VAD filter removed 00:01.384 of audio
+2026-10-02 01:47:36,658 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:47:36,700 [INFO] VAD filter removed 00:01.256 of audio
+2026-10-02 01:47:43,457 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:47:43,500 [INFO] VAD filter removed 00:01.160 of audio
+2026-10-02 01:47:46,301 [INFO] Telegram status: Phone link waiting for internet connection, retrying...
+2026-10-02 01:47:55,361 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:47:55,399 [INFO] VAD filter removed 00:01.896 of audio
+2026-10-02 01:51:57,060 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:51:57,100 [INFO] VAD filter removed 00:01.048 of audio
+2026-10-02 01:52:52,054 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:52:52,083 [INFO] VAD filter removed 00:01.560 of audio
+2026-10-02 01:53:03,464 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:53:03,507 [INFO] VAD filter removed 00:01.896 of audio
+2026-10-02 01:53:56,060 [INFO] Processing audio with duration 00:04.200
+2026-10-02 01:53:56,095 [INFO] VAD filter removed 00:01.944 of audio
+2026-10-02 01:58:40,462 [INFO] Processing audio with duration 00:05.000
+2026-10-02 01:58:40,506 [INFO] VAD filter removed 00:01.032 of audio
+2026-10-02 02:01:23,458 [INFO] Processing audio with duration 00:05.000
+2026-10-02 02:01:23,501 [INFO] VAD filter removed 00:01.528 of audio
+2026-10-02 02:01:30,259 [INFO] Processing audio with duration 00:04.400
+2026-10-02 02:01:30,298 [INFO] VAD filter removed 00:01.328 of audio
+2026-10-02 02:04:04,754 [INFO] Processing audio with duration 00:05.000
+2026-10-02 02:04:04,795 [INFO] VAD filter removed 00:00.504 of audio
+2026-10-02 02:04:11,954 [INFO] Processing audio with duration 00:05.000
+2026-10-02 02:04:11,996 [INFO] VAD filter removed 00:01.064 of audio
+2026-10-02 02:19:55,677 [INFO] Processing audio with duration 00:03.900
+2026-10-02 02:19:55,712 [INFO] VAD filter removed 00:01.420 of audio
+2026-10-02 02:19:55,927 [INFO] Telegram status: Phone link waiting for internet connection, retrying...
+2026-10-02 02:20:26,095 [INFO] Processing audio with duration 00:04.000
+2026-10-02 02:20:26,121 [INFO] VAD filter removed 00:02.128 of audio
+2026-10-02 02:20:33,059 [INFO] Processing audio with duration 00:05.000
+2026-10-02 02:20:33,102 [INFO] VAD filter removed 00:01.800 of audio
+2026-10-02 02:21:08,365 [INFO] Processing audio with duration 00:05.000
+2026-10-02 02:21:08,409 [INFO] VAD filter removed 00:02.328 of audio
+2026-10-02 02:21:32,559 [INFO] Processing audio with duration 00:05.000
+2026-10-02 02:21:32,603 [INFO] VAD filter removed 00:01.800 of audio
+2026-10-02 02:21:44,881 [INFO] Processing audio with duration 00:04.000
+2026-10-02 02:21:44,917 [INFO] VAD filter removed 00:01.464 of audio
+2026-10-02 02:21:48,931 [INFO] Voice command received: 'Sonakshi Sinha'
+2026-10-02 02:21:56,754 [INFO] HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+2026-10-02 13:01:30,144 [INFO] Vega 2.0 webview server initializing...
+2026-10-02 13:01:30,739 [INFO] WakeListener started. Enabled: True
+2026-10-02 13:01:30,820 [INFO] Telegram bridge started for phone control
+2026-10-02 13:01:30,822 [INFO] Starting Bottle HTTP server on 127.0.0.1:47632...
+2026-10-02 13:01:30,833 [INFO] Registered global shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar)
+2026-10-02 13:01:31,223 [INFO] Launching standalone window using: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+2026-10-02 13:01:35,164 [INFO] HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+2026-10-02 13:01:36,412 [INFO] Telegram status: Phone link on: Telegram bot @hemanth_vega_bot

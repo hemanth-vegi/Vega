@@ -1,4 +1,4 @@
-// ===================================================
+﻿// ===================================================
 // VEGA 2.0 - FRONTEND APPLICATION JAVASCRIPT
 // Full implementation connecting every button, panel,
 // voice events, live feeds, and real Lab Log.
@@ -1294,6 +1294,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
       });
+  }
   window.loadTechNews = loadTechNews;
   window.loadInternships = loadInternships;
   window.loadLabLog = loadLabLog;
