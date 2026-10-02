@@ -2333,6 +2333,8 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
         return None
 
     def lock_screen(self, t, raw):
+        if re.match(r"^(?:please\s+)?lock\s+(?:vega|the\s+app|app|window)(?:\s+now)?$", t):
+            return reply("Locking Vega.", "Locking Vega.", lock_app=True)
         if not re.match(r"^(?:please\s+)?lock\s+(?:my\s+|the\s+)?(?:laptop|computer|pc|screen|system)(?:\s+now)?$", t):
             return None
         if not IS_WINDOWS:

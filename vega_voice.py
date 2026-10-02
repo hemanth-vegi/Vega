@@ -49,6 +49,24 @@ def log_problem(message):
             pass
 
 
+def log_voice_debug(message):
+    """Write diagnostic voice debug events to logs/voice_debug.txt."""
+    try:
+        logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+        os.makedirs(logs_dir, exist_ok=True)
+        path = os.path.join(logs_dir, "voice_debug.txt")
+        msg = str(message).replace("\u201c", '"').replace("\u201d", '"').replace("\u2026", "...").strip()
+        line = time.strftime("[%Y-%m-%d %H:%M:%S] ") + msg + "\n"
+        with open(path, "a", encoding="utf-8", errors="replace") as f:
+            f.write(line)
+            f.flush()
+    except Exception as e:
+        try:
+            sys.stderr.write(f"log_voice_debug error: {e}\n")
+        except Exception:
+            pass
+
+
 def clean_for_speech(text):
     text = re.sub(r"```.*?```", " (the code is on screen) ", text, flags=re.S)
     text = re.sub(r"https?://\S+", "", text)
@@ -529,20 +547,29 @@ class Ears:
             log_problem(f"command: transcribing took over {timeout}s with '{name}', gave up")
             return ""
         log_problem(f"command text ({time.time() - t0:.1f}s, {'fast' if use_fast else name}): “{out.get('text', '')[:100]}”")
-        return out.get("text", "")
+        cmd_text = out.get("text", "")
+        if cmd_text:
+            log_voice_debug(f"Transcription (Whisper command): '{cmd_text}'")
+        return cmd_text
 
     def transcribe(self, audio, fast=False, prompt=None):
         clean_audio = normalize_audio(audio) if isinstance(audio, np.ndarray) else audio
         if not fast:  # the Mic button: try Google first
             g = self.google(clean_audio)
             if g:
+                log_voice_debug(f"Transcription (Google): '{g}'")
                 return g
             if g == "":  # Google often misses one short word like "yes": the laptop model gets a try too
                 log_problem("mic: google heard no words, trying the laptop model")
                 text = drop_filler(self._words(clean_audio, fast, prompt))
                 log_problem(f"mic: laptop model heard “{text[:80]}”")
+                if text:
+                    log_voice_debug(f"Transcription (Whisper fallback): '{text}'")
                 return text
-        return self._words(clean_audio, fast, prompt)
+        res = self._words(clean_audio, fast, prompt)
+        if res:
+            log_voice_debug(f"Transcription ({'Whisper-fast' if fast else 'Whisper'}): '{res}'")
+        return res
 
     def transcribe_file(self, path):
         return self._words(path)
@@ -817,30 +844,20 @@ class WakeListener(threading.Thread):
                 log_problem(f"wake voice check failed ({e}), using the listen only")
         first_wake = find_wake(heard, loose=(self.strictness in ("easy", "very_easy"))) is not None
         if not got:
-            # Without voiceprint verification package installed:
-            # Only wake if the second unhinted listen confirms Vega (second_ok).
-            # This eliminates false wakes on background noise while keeping actual "Hey Vega" responsive.
             ok = second_ok
+            reason = f"first_wake={first_wake}, second_ok={second_ok}, no voice check"
+            log_voice_debug(f"Wake decision: {'WOKE' if ok else 'IGNORED'} - text='{heard}', second='{(again or '')[:30]}' - {reason}")
             log_problem(f"wake: second listen heard \"{(again or '')[:40]}\" -> {'OK' if ok else 'not Vega'} "
                         f"(no voice check) -> {'WAKE' if ok else 'ignored'}")
             return ok
         score, strong, low = got[:3]
-        enforce = got[3] if len(got) > 3 else True  # "Wake up only for my voice" ticked?
-        # Reliable voice check:
-        # 1. High match (score >= strong) -> always accept
-        # 2. Both listens confirmed Vega and voice match is reasonable (score >= low)
-        # 3. First listen matched clean wake word and voice similarity is clearly positive (score >= max(0.11, low - 0.04))
-        # 4. If voice lock is disabled, accept any wake word detection
+        enforce = got[3] if len(got) > 3 else True
         if not enforce:
             ok = first_wake or second_ok
         else:
-            # Responsive speaker verification:
-            # Hemanth commands score ~0.28 - 0.48. Short "Hey Vega" clips score ~0.25 - 0.28.
-            # Other voices/noise in the room score < 0.20 or fail the second check.
-            # 1. Command match (score >= strong, e.g. >= 0.28): accept if either listen heard Vega
-            # 2. Both listens confirmed Vega: accept if score >= low (0.20)
-            # 3. Ambient chatter (< 0.20): reject!
             ok = (score >= strong and (first_wake or second_ok)) or (first_wake and second_ok and score >= low)
+        reason = f"first_wake={first_wake}, second_ok={second_ok}, voice_score={score:.2f} (strong={strong:.2f}, low={low:.2f}, enforce={enforce})"
+        log_voice_debug(f"Wake decision: {'WOKE' if ok else 'IGNORED'} - text='{heard}', second='{(again or '')[:30]}' - {reason}")
         log_problem(f"wake: “{heard[:40]}” voice {score:.2f} (you >= {strong:.2f}, maybe >= {low:.2f}), "
                     f"second listen \"{(again or '')[:30]}\" {'OK' if second_ok else 'not Vega'} -> {'WAKE' if ok else 'ignored'}")
         return ok
@@ -950,11 +967,19 @@ class WakeListener(threading.Thread):
                 blocks.put(indata[:, 0].copy())
 
             try:
+                try:
+                    dev_idx = sd.default.device[0]
+                    dev_info = sd.query_devices(dev_idx)
+                    log_voice_debug(f"Microphone opened: device [{dev_idx}] '{dev_info['name']}', max_input_channels={dev_info.get('max_input_channels', 1)}, samplerate={SAMPLE_RATE}")
+                except Exception as ex:
+                    log_voice_debug(f"Microphone device query: {ex}")
+                log_voice_debug("listener started")
                 with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=BLOCK, callback=cb):
                     self._loop(blocks)
             except Exception as e:
                 import traceback
                 log_problem("listener error: " + traceback.format_exc().replace("\n", " | ")[-800:])
+                log_voice_debug(f"Listener error: {e}")
                 if self.on_error:
                     self.on_error(f"Listening problem: {e}")
                 time.sleep(3)
@@ -963,6 +988,7 @@ class WakeListener(threading.Thread):
         noise, seg, quiet, pre, loud = None, [], 0.0, [], 0
         waiting_for_command_until = 0.0
         wake_audio = None
+        last_level_log = 0.0
         while self.enabled.is_set() and not self.paused.is_set():
             try:
                 b = blocks.get(timeout=0.5)
@@ -975,6 +1001,10 @@ class WakeListener(threading.Thread):
             noise = rms if noise is None else noise
             # 1.6x noise floor: catches first syllable earlier without too many false positives
             threshold = max(noise * 1.6, 0.0030)
+            now = time.time()
+            if now - last_level_log >= 1.0:
+                last_level_log = now
+                log_voice_debug(f"Live sound level: RMS={rms:.5f}, noise_floor={noise:.5f}, threshold={threshold:.5f}")
             if not seg:
                 if rms > threshold:
                     seg = pre[-12:] + [b]  # keep 1.2s pre-roll so first word start is preserved

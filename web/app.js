@@ -1,4 +1,4 @@
-﻿// ===================================================
+// ===================================================
 // VEGA 2.0 - FRONTEND APPLICATION JAVASCRIPT
 // Full implementation connecting every button, panel,
 // voice events, live feeds, and real Lab Log.
@@ -169,6 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
           refreshChatList();
         } else if (type === "status") {
           updateStatusBadge(data.text, data.badge);
+        } else if (type === "lock") {
+          showLockScreen(true);
+        } else if (type === "unlock") {
+          hideLockScreen();
         } else if (type === "hotkey_mic") {
           toggleMic();
         } else if (type === "toggle_quickbar") {
@@ -1077,6 +1081,207 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ==========================================
+  // LOCK SCREEN, VOICE LOCK & MIC DIAGNOSTIC
+  // ==========================================
+  const lockScreenModal = document.getElementById("lock-screen-modal");
+  const lockPinInput = document.getElementById("lock-pin-input");
+  const lockUnlockBtn = document.getElementById("lock-unlock-btn");
+  const lockVoiceBtn = document.getElementById("lock-voice-btn");
+  const lockVoiceHint = document.getElementById("lock-voice-hint");
+  const lockErrorMsg = document.getElementById("lock-error-msg");
+  const lockVegaBtn = document.getElementById("lock-vega-btn");
+  const wakeOnlyMeCheck = document.getElementById("wake-only-me-check");
+  const testMicBtn = document.getElementById("test-mic-btn");
+  const testMicResults = document.getElementById("test-mic-results");
+  const testMicStatus = document.getElementById("test-mic-status");
+  const testMicLevel = document.getElementById("test-mic-level");
+  const testMicHeard = document.getElementById("test-mic-heard");
+
+  let appIsLocked = false;
+  let autoLockMinutes = 30;
+  let lastUserActivity = Date.now();
+
+  function recordActivity() {
+    lastUserActivity = Date.now();
+  }
+  window.addEventListener("mousemove", recordActivity, { passive: true });
+  window.addEventListener("keydown", recordActivity, { passive: true });
+  window.addEventListener("click", recordActivity, { passive: true });
+
+  setInterval(() => {
+    if (!appIsLocked && autoLockMinutes > 0) {
+      if (Date.now() - lastUserActivity > autoLockMinutes * 60 * 1000) {
+        lockVegaNow();
+      }
+    }
+  }, 15000);
+
+  function showLockScreen(voiceUnlockReady) {
+    appIsLocked = true;
+    if (lockScreenModal) {
+      lockScreenModal.classList.remove("hidden");
+      if (lockPinInput) {
+        lockPinInput.value = "";
+        setTimeout(() => lockPinInput.focus(), 120);
+      }
+      if (lockErrorMsg) lockErrorMsg.textContent = "";
+      if (voiceUnlockReady) {
+        if (lockVoiceBtn) lockVoiceBtn.classList.remove("hidden");
+        if (lockVoiceHint) lockVoiceHint.classList.remove("hidden");
+      } else {
+        if (lockVoiceBtn) lockVoiceBtn.classList.add("hidden");
+        if (lockVoiceHint) lockVoiceHint.classList.add("hidden");
+      }
+    }
+    updateStatusBadge("Locked", "locked");
+  }
+
+  function hideLockScreen() {
+    appIsLocked = false;
+    lastUserActivity = Date.now();
+    if (lockScreenModal) {
+      lockScreenModal.classList.add("hidden");
+      if (lockPinInput) lockPinInput.value = "";
+      if (lockErrorMsg) lockErrorMsg.textContent = "";
+    }
+    updateStatusBadge("Ready - just talk", "ready");
+    if (promptInput) promptInput.focus();
+  }
+
+  window.showLockScreen = showLockScreen;
+  window.hideLockScreen = hideLockScreen;
+
+  function tryPinUnlock() {
+    const pin = lockPinInput ? lockPinInput.value.trim() : "";
+    if (!pin) {
+      if (lockErrorMsg) lockErrorMsg.textContent = "Please enter your PIN.";
+      return;
+    }
+    if (lockUnlockBtn) {
+      lockUnlockBtn.disabled = true;
+      lockUnlockBtn.textContent = "Verifying...";
+    }
+    fetch("/api/lock/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: pin })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (lockUnlockBtn) {
+          lockUnlockBtn.disabled = false;
+          lockUnlockBtn.textContent = "Unlock";
+        }
+        if (res && res.ok) {
+          hideLockScreen();
+        } else {
+          if (lockErrorMsg) lockErrorMsg.textContent = res.error || "Wrong PIN. Try again.";
+          if (lockPinInput) {
+            lockPinInput.value = "";
+            lockPinInput.focus();
+          }
+        }
+      })
+      .catch(err => {
+        if (lockUnlockBtn) {
+          lockUnlockBtn.disabled = false;
+          lockUnlockBtn.textContent = "Unlock";
+        }
+        if (lockErrorMsg) lockErrorMsg.textContent = "Error: " + err.message;
+      });
+  }
+
+  if (lockUnlockBtn) {
+    lockUnlockBtn.addEventListener("click", tryPinUnlock);
+  }
+  if (lockPinInput) {
+    lockPinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryPinUnlock();
+    });
+  }
+
+  if (lockVoiceBtn) {
+    lockVoiceBtn.addEventListener("click", () => {
+      lockVoiceBtn.disabled = true;
+      lockVoiceBtn.textContent = "Listening for your voice...";
+      if (lockErrorMsg) lockErrorMsg.textContent = "Say 'Hey Vega' or speak now...";
+      fetch("/api/lock/voice_unlock", { method: "POST" })
+        .then(r => r.json())
+        .then(res => {
+          lockVoiceBtn.disabled = false;
+          lockVoiceBtn.textContent = "Unlock with my voice";
+          if (res && res.ok) {
+            hideLockScreen();
+          } else {
+            if (lockErrorMsg) lockErrorMsg.textContent = res.error || "Voice not recognized. Use your PIN.";
+          }
+        })
+        .catch(err => {
+          lockVoiceBtn.disabled = false;
+          lockVoiceBtn.textContent = "Unlock with my voice";
+          if (lockErrorMsg) lockErrorMsg.textContent = "Error: " + err.message;
+        });
+    });
+  }
+
+  function lockVegaNow() {
+    fetch("/api/lock/now", { method: "POST" })
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.ok) {
+          showLockScreen(true);
+        }
+      });
+  }
+
+  if (lockVegaBtn) {
+    lockVegaBtn.addEventListener("click", () => {
+      settingsModal.classList.add("hidden");
+      lockVegaNow();
+    });
+  }
+
+  if (wakeOnlyMeCheck) {
+    wakeOnlyMeCheck.addEventListener("change", () => {
+      fetch("/api/settings/wake_only_me", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wake_only_me: wakeOnlyMeCheck.checked })
+      });
+    });
+  }
+
+  if (testMicBtn) {
+    testMicBtn.addEventListener("click", () => {
+      testMicBtn.disabled = true;
+      testMicBtn.textContent = "Testing...";
+      if (testMicResults) testMicResults.style.display = "block";
+      if (testMicStatus) testMicStatus.textContent = "Recording 3 seconds... speak now!";
+      if (testMicLevel) testMicLevel.textContent = "";
+      if (testMicHeard) testMicHeard.textContent = "";
+
+      fetch("/api/mic/test", { method: "POST" })
+        .then(r => r.json())
+        .then(res => {
+          testMicBtn.disabled = false;
+          testMicBtn.textContent = "🎤 Test microphone";
+          if (res && res.ok) {
+            if (testMicStatus) testMicStatus.textContent = "Done! Recorded successfully.";
+            if (testMicLevel) testMicLevel.textContent = `Sound level: ${res.level_pct}% (RMS: ${res.rms})`;
+            if (testMicHeard) testMicHeard.textContent = `Heard: "${res.heard}"`;
+          } else {
+            if (testMicStatus) testMicStatus.textContent = "Error: " + (res.error || "Unknown test error");
+          }
+        })
+        .catch(err => {
+          testMicBtn.disabled = false;
+          testMicBtn.textContent = "🎤 Test microphone";
+          if (testMicStatus) testMicStatus.textContent = "Request error: " + err.message;
+        });
+    });
+  }
+
   // Theme Toggle
   themeToggle.addEventListener("click", () => {
     document.body.classList.toggle("light-theme");
@@ -1089,10 +1294,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // REAL LAB LOG IMPLEMENTATION
+  // REAL LAB LOG IMPLEMENTATION WITH DAY NAVIGATION & STREAK
   // ==========================================
-  function loadLabLog() {
-    fetch(`/api/lablog?track=${currentTrack}`)
+  let currentLabDayIdx = null; // null means active today
+  const lablogPrevBtn = document.getElementById("lablog-prev-btn");
+  const lablogTodayBtn = document.getElementById("lablog-today-btn");
+  const lablogNextBtn = document.getElementById("lablog-next-btn");
+  const lablogStatusTag = document.getElementById("lablog-status-tag");
+  const lablogStreakBadge = document.getElementById("lablog-streak-badge");
+  const lablogProgressText = document.getElementById("lablog-progress-text");
+  const lablogDateText = document.getElementById("lablog-date-text");
+
+  function loadLabLog(dayIdx) {
+    if (dayIdx !== undefined) currentLabDayIdx = dayIdx;
+    const url = (currentLabDayIdx !== null && currentLabDayIdx !== undefined)
+      ? `/api/lablog?track=${currentTrack}&day=${currentLabDayIdx}`
+      : `/api/lablog?track=${currentTrack}`;
+
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (!data || !data.ok) {
@@ -1100,10 +1319,37 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        currentLabDayIdx = data.current_idx !== undefined ? data.current_idx : data.today_idx;
         lablogTrackName.textContent = (data.track_name || "Linux").toUpperCase() + " LAB";
-        lablogDayTag.textContent = data.label || `Day ${data.today_idx + 1}`;
+        lablogDayTag.textContent = data.label || `Day ${currentLabDayIdx + 1}`;
         hubTaskText.textContent = data.title || "No milestone title";
         hubTaskTopic.textContent = data.topic ? `Topic: ${data.topic}` : "";
+
+        if (lablogStatusTag) {
+          if (data.is_today) {
+            lablogStatusTag.textContent = "TODAY";
+            lablogStatusTag.style.background = "#1e3a2f";
+            lablogStatusTag.style.color = "#4ade80";
+          } else if (currentLabDayIdx < data.today_idx) {
+            lablogStatusTag.textContent = "PAST DAY";
+            lablogStatusTag.style.background = "#2a2d35";
+            lablogStatusTag.style.color = "var(--text-muted)";
+          } else {
+            lablogStatusTag.textContent = "UPCOMING";
+            lablogStatusTag.style.background = "#1f293d";
+            lablogStatusTag.style.color = "var(--accent)";
+          }
+        }
+
+        if (lablogStreakBadge) {
+          lablogStreakBadge.textContent = `🔥 Streak: ${data.streak || 0} day${data.streak !== 1 ? 's' : ''}`;
+        }
+        if (lablogProgressText && data.stats) {
+          lablogProgressText.textContent = `${data.stats.done} of ${data.stats.total} days done`;
+        }
+        if (lablogDateText && data.date_str) {
+          lablogDateText.textContent = data.date_str;
+        }
 
         // Render Steps with Interactive Checkboxes
         hubStepsList.innerHTML = "";
@@ -1122,7 +1368,7 @@ document.addEventListener("DOMContentLoaded", () => {
             fetch("/api/lablog/tick", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ track: currentTrack, step: st.num, done: cb.checked })
+              body: JSON.stringify({ track: currentTrack, step: st.num, done: cb.checked, day: currentLabDayIdx })
             }).then(r => r.json()).then(res => {
               if (res && res.ok) {
                 if (cb.checked) sp.classList.add("done");
@@ -1149,13 +1395,34 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
+  if (lablogPrevBtn) {
+    lablogPrevBtn.addEventListener("click", () => {
+      if (currentLabDayIdx !== null && currentLabDayIdx > 0) {
+        loadLabLog(currentLabDayIdx - 1);
+      }
+    });
+  }
+  if (lablogTodayBtn) {
+    lablogTodayBtn.addEventListener("click", () => {
+      currentLabDayIdx = null;
+      loadLabLog();
+    });
+  }
+  if (lablogNextBtn) {
+    lablogNextBtn.addEventListener("click", () => {
+      if (currentLabDayIdx !== null) {
+        loadLabLog(currentLabDayIdx + 1);
+      }
+    });
+  }
+
   // Save Notes
   saveNotesBtn.addEventListener("click", () => {
     saveNotesBtn.textContent = "Saving...";
     fetch("/api/lablog/save_notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ track: currentTrack, notes: hubNotesInput.value.trim() })
+      body: JSON.stringify({ track: currentTrack, notes: hubNotesInput.value.trim(), day: currentLabDayIdx })
     }).then(r => r.json()).then(res => {
       saveNotesBtn.textContent = res && res.ok ? "Saved ✓" : "Failed";
       setTimeout(() => saveNotesBtn.textContent = "Save notes", 1500);
@@ -1169,7 +1436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch("/api/lablog/assess", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ track: currentTrack })
+      body: JSON.stringify({ track: currentTrack, day: currentLabDayIdx })
     }).then(r => r.json()).then(res => {
       assessLogBtn.textContent = "Assess my log";
       assessLogBtn.disabled = false;
@@ -1353,6 +1620,12 @@ document.addEventListener("DOMContentLoaded", () => {
           speedSlider.value = st.speech_rate;
           speedVal.textContent = st.speech_rate + "x";
         }
+        if (st.lock_minutes !== undefined) autoLockMinutes = st.lock_minutes;
+        if (st.wake_only_me !== undefined && wakeOnlyMeCheck) wakeOnlyMeCheck.checked = st.wake_only_me;
+        if (st.locked) {
+          showLockScreen(st.voice_unlock_ready);
+        }
+
         refreshChatList();
         loadLabLog();
         loadTechNews();

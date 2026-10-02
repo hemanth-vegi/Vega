@@ -41,10 +41,6 @@
    "review": "Score: 8/10\nDone well: You’ve got a really good handle on the basic commands – mkdir, cd, touch, cp, mv, and ls. You’ve correctly identified hidden files too.\nMissing: You didn’t mention checking the permissions of the files you created. It’s good to understand how to change them.\nCheck yourself: 1) Can you explain what the `-a` flag in the `ls -la` command does? 2) What happens if you try to delete a file you don’t have permission to delete?\nTip for tomorrow: Try creating a new directory with a different name and see if you can change its permissions using `chmod`.",
    "score": 8,
    "reviewed": "2026-09-28T02:51:02"
-  },
-  "9": {
-   "ticked": [],
-   "notes": "[12:51 AM] Configured user passwords and verified sudo.\n[12:57 AM] Configured user passwords and verified sudo.\n[1:18 AM] Audit test notes\n[1:19 AM] Audit test notes\n[1:21 AM] Audit test notes"
   }
  }
 }

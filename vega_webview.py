@@ -62,7 +62,8 @@ def open_path(path):
 
 from vega_chats import ChatStore
 import vega_voice
-from vega_voice import Mouth, Ears, WakeListener, shorten_for_speech, beep
+from vega_voice import Mouth, Ears, WakeListener, shorten_for_speech, beep, log_voice_debug
+import vega_security as sec
 import bottle
 from bottle import route, run, request, response, static_file, HTTPResponse
 from socketserver import ThreadingMixIn
@@ -83,6 +84,11 @@ WEB_DIR = os.path.join(BASE_DIR, "web")
 vega = Vega()
 store = ChatStore()
 cfg = vega.cfg
+
+# Security / Lock state
+is_locked = sec.has_pin()
+pin_fails = 0
+pin_wait_until = 0.0
 
 mouth = Mouth(rate=cfg.get("speech_rate", 1.0), voice=cfg.get("voice", "female"))
 ears = Ears(cfg.get("whisper_model", "small.en"), cfg.get("wake_model", "base.en"))
@@ -124,7 +130,25 @@ def check_is_busy():
 
 # Wake listener callback handlers
 def on_wake_detected(audio=None):
+    global is_locked
     log_debug("Wake word 'Hey Vega' detected!")
+    log_voice_debug("Wake word 'Hey Vega' detected!")
+    if is_locked and sec.voice_unlock_ready() and audio is not None:
+        try:
+            vid = sec.VoiceID()
+            score = vid.score(audio)
+            log_voice_debug(f"Wake unlock check: score={score:.2f} (needs {sec.unlock_threshold():.2f})")
+            if score >= sec.unlock_threshold():
+                is_locked = False
+                broadcast_event("unlock", {"status": "unlocked"})
+                try:
+                    beep("wake")
+                except Exception:
+                    pass
+                mouth.say("Welcome back, Hemanth.")
+                return
+        except Exception as e:
+            log_voice_debug(f"Wake unlock check error: {e}")
     try:
         beep("wake")
     except Exception:
@@ -132,10 +156,46 @@ def on_wake_detected(audio=None):
     broadcast_event("wake", {"status": "Yes? I'm listening...", "time": time.time()})
 
 def on_voice_command(text, audio=None):
-    global is_busy
+    global is_busy, is_locked
     if not text or not text.strip():
         return
     log_debug(f"Voice command received: '{text}'")
+    log_voice_debug(f"Command running: '{text}'")
+
+    # If Vega is locked, only voice unlock or unlock prompt
+    if is_locked:
+        if sec.voice_unlock_ready() and audio is not None:
+            try:
+                vid = sec.VoiceID()
+                score = vid.score(audio)
+                log_voice_debug(f"Voice unlock check on command: score={score:.2f} (needs {sec.unlock_threshold():.2f})")
+                if score >= sec.unlock_threshold():
+                    is_locked = False
+                    broadcast_event("unlock", {"status": "unlocked"})
+                    mouth.say("Welcome back, Hemanth.")
+                else:
+                    broadcast_event("voice_response", {
+                        "text": f"That didn't match your voice closely enough ({score:.2f}, needs {sec.unlock_threshold():.2f}). Enter your PIN.",
+                        "source_label": "Security",
+                        "chat_id": active_chat_id
+                    })
+                    return
+            except Exception as e:
+                log_voice_debug(f"Voice unlock check error: {e}")
+                broadcast_event("voice_response", {
+                    "text": "Vega is locked. Enter your PIN to unlock.",
+                    "source_label": "Security",
+                    "chat_id": active_chat_id
+                })
+                return
+        else:
+            broadcast_event("voice_response", {
+                "text": "Vega is locked. Enter your PIN to unlock.",
+                "source_label": "Security",
+                "chat_id": active_chat_id
+            })
+            return
+
     broadcast_event("voice_input", {"text": text, "chat_id": active_chat_id})
 
     # Execute through vega.handle
@@ -143,16 +203,22 @@ def on_voice_command(text, audio=None):
     broadcast_event("status", {"text": "Thinking...", "badge": "thinking"})
 
     def run_voice_task():
-        global is_busy
+        global is_busy, is_locked
         try:
+            log_voice_debug(f"Command run: '{text}'")
             chat = store.load(active_chat_id) or store.new()
             store.add(chat, "you", text)
 
             out = vega.handle(text, source="laptop", spoken=True)
             ans = out.get("text", "")
+            log_voice_debug(f"Command result: '{ans[:80]}'")
             say_text = out.get("say") or ans
             src_label = out.get("source_label", getattr(vega, "last_source_label", "Online"))
             open_tab = "lablog" if out.get("open_lablog") else None
+
+            if out.get("lock_app"):
+                is_locked = True
+                broadcast_event("lock", {"status": "locked"})
 
             store.add(chat, "vega", ans)
 
@@ -192,12 +258,28 @@ wake = WakeListener(
 wake.strictness = str(cfg.get("wake_strictness", "easy"))
 wake.direct = lambda: is_direct_talking
 
+# Wire wake_only_me voice score
+def get_voice_score(audio):
+    if not sec.has_voiceprint() or sec.voice_packages_missing():
+        return None
+    try:
+        vid = sec.VoiceID()
+        score = vid.score(audio)
+        return (score, sec.voice_threshold(), sec.voice_threshold() - 0.08, bool(cfg.get("wake_only_me", True)))
+    except Exception as e:
+        log_error(f"Voice check error: {e}")
+        return None
+
+wake.voice_score = get_voice_score
+
 try:
     wake.start()
     wake.set_enabled(bool(cfg.get("wake_word_on", True)))
     log_debug(f"WakeListener started. Enabled: {bool(cfg.get('wake_word_on', True))}")
+    log_voice_debug(f"WakeListener started. Enabled: {bool(cfg.get('wake_word_on', True))}")
 except Exception as e:
     log_error(f"Failed to start WakeListener: {e}")
+    log_voice_debug(f"Failed to start WakeListener: {e}")
 
 # Telegram Phone Bridge
 tg_bridge = None
@@ -492,6 +574,10 @@ def send_message():
                 open_tab = "lablog" if val.get("open_lablog") else None
                 store.add(chat, "vega", ans)
 
+                if val.get("lock_app"):
+                    is_locked = True
+                    broadcast_event("lock", {"status": "locked"})
+
                 if vega.cfg.get("voice_on", True):
                     say_text = shorten_for_speech(val.get("say") or ans)
                     threading.Thread(target=mouth.say, args=(say_text,), daemon=True).start()
@@ -513,8 +599,17 @@ def get_lablog():
     try:
         lessons = vega.track_lessons(tid)
         today_idx = vega.track_today(tid)
-        idx = min(max(today_idx, 0), max(len(lessons) - 1, 0)) if lessons else 0
+        day_param = request.query.get("day")
+        if day_param is not None and str(day_param).strip() != "":
+            try:
+                idx = int(day_param)
+            except ValueError:
+                idx = today_idx
+        else:
+            idx = today_idx
+        idx = min(max(idx, 0), max(len(lessons) - 1, 0)) if lessons else 0
         lesson = lessons[idx] if lessons and 0 <= idx < len(lessons) else {}
+        d_info = vega.plan_day(vega.load_plan(), idx) if tid == "linux" else vega.track_day(tid, idx)
 
         # Read actual ticks, notes, reviews from lablog.json
         lab_data = read_json("lablog.json", {}) or {}
@@ -522,7 +617,7 @@ def get_lablog():
         day_entry = days_dict.get(str(idx), {})
 
         ticked_indices = set(day_entry.get("ticked", []))
-        raw_steps = lesson.get("steps", [])
+        raw_steps = (d_info.get("steps") if d_info else None) or lesson.get("steps", [])
         steps = []
         for i, s in enumerate(raw_steps):
             steps.append({
@@ -531,20 +626,28 @@ def get_lablog():
                 "done": (i + 1) in ticked_indices
             })
 
+        stats = vega.track_stats(tid)
+        date_str = d_info["date"].strftime("%A %d %B") if d_info and "date" in d_info else ""
+
         return json.dumps({
             "ok": True,
             "track_id": tid,
             "track_name": vega.track_name(tid),
             "total_lessons": len(lessons),
-            "today_idx": idx,
-            "title": lesson.get("title", "No milestone scheduled"),
-            "topic": lesson.get("topic", ""),
-            "week": lesson.get("week", 1),
-            "label": lesson.get("label", f"Day {idx + 1}"),
+            "today_idx": today_idx,
+            "current_idx": idx,
+            "is_today": (idx == today_idx),
+            "title": (d_info.get("title") if d_info else None) or lesson.get("title", "No milestone scheduled"),
+            "topic": (d_info.get("topic") if d_info else None) or lesson.get("topic", ""),
+            "week": (d_info.get("week") if d_info else None) or lesson.get("week", 1),
+            "label": (d_info.get("label") if d_info else None) or lesson.get("label", f"Day {idx + 1}"),
+            "date_str": date_str,
             "steps": steps,
             "notes": day_entry.get("notes", ""),
             "review": day_entry.get("review", ""),
             "score": day_entry.get("score"),
+            "streak": stats.get("streak", 0),
+            "stats": stats,
             "tracks": [{"id": t, "name": vega.track_name(t)} for t in vega.track_ids()]
         })
     except Exception as e:
@@ -557,10 +660,10 @@ def tick_lablog_step():
     tid = data.get("track", "linux")
     step_num = int(data.get("step", 1))
     done = bool(data.get("done", True))
+    day_idx = int(data.get("day", vega.track_today(tid)))
     try:
-        idx = vega.track_today(tid)
-        all_done = vega.tick_step(idx, step_num, done)
-        return json.dumps({"ok": True, "step": step_num, "done": done, "all_done": all_done})
+        all_done = vega.tick_step(day_idx, step_num, done)
+        return json.dumps({"ok": True, "day": day_idx, "step": step_num, "done": done, "all_done": all_done})
     except Exception as e:
         log_error(f"Error ticking lablog step: {e}")
         return json.dumps({"ok": False, "error": str(e)})
@@ -570,10 +673,12 @@ def save_lablog_notes():
     data = request.json or {}
     tid = data.get("track", "linux")
     notes = data.get("notes", "").strip()
+    day_idx = int(data.get("day", vega.track_today(tid)))
     try:
-        idx = vega.track_today(tid)
-        vega.add_lab_note(idx, notes)
-        return json.dumps({"ok": True})
+        entry = vega.lab_entry(day_idx)
+        entry["notes"] = notes
+        vega.save_lab_entry(day_idx, entry)
+        return json.dumps({"ok": True, "day": day_idx})
     except Exception as e:
         log_error(f"Error saving lablog notes: {e}")
         return json.dumps({"ok": False, "error": str(e)})
@@ -582,12 +687,109 @@ def save_lablog_notes():
 def assess_lablog():
     data = request.json or {}
     tid = data.get("track", "linux")
+    day_idx = int(data.get("day", vega.track_today(tid)))
     try:
-        idx = vega.track_today(tid)
-        review_text, score = vega.assess_day(idx)
-        return json.dumps({"ok": True, "review": review_text, "score": score})
+        review_text, score = vega.assess_day(day_idx)
+        return json.dumps({"ok": True, "day": day_idx, "review": review_text, "score": score})
     except Exception as e:
         log_error(f"Error assessing lablog: {e}")
+        return json.dumps({"ok": False, "error": str(e)})
+
+# Password / PIN Lock Endpoints
+@route("/api/lock/verify", method="POST")
+def verify_pin():
+    global is_locked, pin_fails, pin_wait_until
+    response.content_type = "application/json"
+    now = time.time()
+    if now < pin_wait_until:
+        wait_left = int(pin_wait_until - now) + 1
+        return json.dumps({"ok": False, "error": f"Too many wrong tries. Wait {wait_left} seconds.", "wait": wait_left})
+    data = request.json or {}
+    pin = str(data.get("pin", "")).strip()
+    if sec.check_pin(pin):
+        pin_fails = 0
+        is_locked = False
+        broadcast_event("unlock", {"status": "unlocked"})
+        return json.dumps({"ok": True})
+    else:
+        pin_fails += 1
+        if pin_fails >= 5:
+            pin_fails = 0
+            pin_wait_until = now + 30
+            return json.dumps({"ok": False, "error": "Wrong PIN 5 times. Wait 30 seconds.", "wait": 30})
+        return json.dumps({"ok": False, "error": "Wrong PIN. Try again.", "fails": pin_fails})
+
+@route("/api/lock/now", method="POST")
+def lock_now():
+    global is_locked
+    if sec.has_pin():
+        is_locked = True
+        mouth.stop()
+        broadcast_event("lock", {"status": "locked"})
+    return json.dumps({"ok": True, "locked": is_locked})
+
+@route("/api/lock/voice_unlock", method="POST")
+def voice_unlock():
+    global is_locked
+    response.content_type = "application/json"
+    if not is_locked:
+        return json.dumps({"ok": True, "status": "already_unlocked"})
+    if not sec.voice_unlock_ready():
+        return json.dumps({"ok": False, "error": "Voice unlock not ready. Please type your PIN."})
+    try:
+        audio = ears.listen_once(wait_seconds=5, silence=1.2)
+        if audio is None:
+            return json.dumps({"ok": False, "error": "I didn't hear anything. Try again, or use your PIN."})
+        vid = sec.VoiceID()
+        score = vid.score(audio)
+        if score >= sec.unlock_threshold():
+            is_locked = False
+            broadcast_event("unlock", {"status": "unlocked"})
+            mouth.say("Welcome back, Hemanth.")
+            return json.dumps({"ok": True, "score": round(score, 2)})
+        else:
+            return json.dumps({
+                "ok": False,
+                "error": f"That didn't match your voice closely enough ({score:.2f}, needs {sec.unlock_threshold():.2f}). Use your PIN."
+            })
+    except Exception as e:
+        log_error(f"voice_unlock error: {e}")
+        return json.dumps({"ok": False, "error": str(e)})
+
+@route("/api/settings/wake_only_me", method="POST")
+def toggle_wake_only_me():
+    data = request.json or {}
+    val = bool(data.get("wake_only_me", True))
+    cfg["wake_only_me"] = val
+    from vega_core import save_config_value
+    save_config_value("wake_only_me", val)
+    return json.dumps({"ok": True, "wake_only_me": val})
+
+# Test Microphone Endpoint
+@route("/api/mic/test", method="POST")
+def test_microphone():
+    response.content_type = "application/json"
+    try:
+        import sounddevice as sd
+        import numpy as np
+        dur = 3.0
+        fs = 16000
+        log_voice_debug("Test microphone: recording 3 seconds...")
+        recording = sd.rec(int(dur * fs), samplerate=fs, channels=1, dtype='float32')
+        sd.wait()
+        rec = recording.flatten()
+        rms = float(np.sqrt(np.mean(rec ** 2)))
+        level_pct = int(min(100, rms * 500))
+        text = ears.transcribe(rec)
+        log_voice_debug(f"Test microphone result: RMS={rms:.5f} ({level_pct}%), heard='{text}'")
+        return json.dumps({
+            "ok": True,
+            "rms": round(rms, 5),
+            "level_pct": level_pct,
+            "heard": text or "(silence)"
+        })
+    except Exception as e:
+        log_error(f"Test microphone error: {e}")
         return json.dumps({"ok": False, "error": str(e)})
 
 # Live Tech News & Internships
@@ -837,7 +1039,12 @@ def initial_state():
         "listening_on": bool(vega.cfg.get("wake_word_on", True)),
         "voice_on": bool(vega.cfg.get("voice_on", True)),
         "speech_rate": vega.cfg.get("speech_rate", 1.0),
-        "startup_enabled": os.path.exists(startup_shortcut_path())
+        "startup_enabled": os.path.exists(startup_shortcut_path()),
+        "locked": is_locked,
+        "has_pin": sec.has_pin(),
+        "lock_minutes": sec.lock_minutes(),
+        "voice_unlock_ready": sec.voice_unlock_ready(),
+        "wake_only_me": bool(vega.cfg.get("wake_only_me", True))
     })
 
 # JavaScript Error & Debug Logging Endpoint
@@ -867,8 +1074,36 @@ def self_test():
         except Exception as e:
             results.append({"name": name, "status": "FAIL", "error": str(e)})
 
+    # 1. Base storage & chats
     check("chats_list", lambda: store.all())
-    check("lablog_load", lambda: read_json(os.path.join(BASE_DIR, "lablog.json"), {}))
+
+    # 2. Opening Password / Lock feature
+    check("lock_has_pin", lambda: sec.has_pin())
+    check("lock_pin_verification", lambda: not sec.check_pin("definitely_wrong_pin_99999"))
+    check("lock_laptop_command", lambda: "Locking" in vega.handle("lock my laptop")["text"])
+    check("lock_vega_command", lambda: vega.handle("lock vega").get("lock_app") is True)
+
+    # 3. Voice Commands feature
+    check("voice_listener_active", lambda: wake.is_alive() and wake.enabled.is_set())
+    check("voice_cmd_open_brave", lambda: "brave" in vega.handle("open brave")["text"].lower())
+    check("voice_cmd_open_whatsapp", lambda: "whatsapp" in vega.handle("open whatsapp")["text"].lower())
+    check("voice_cmd_open_youtube", lambda: "youtube" in vega.handle("open youtube")["text"].lower())
+    check("voice_cmd_open_lablog", lambda: vega.handle("open lab log").get("open_lablog") is True)
+    check("voice_cmd_open_lablock_alias", lambda: vega.handle("open lab lock").get("open_lablog") is True)
+    check("voice_cmd_open_blacklock_alias", lambda: vega.handle("open black lock").get("open_lablog") is True)
+
+    # 4. Lab Log feature with real current day
+    def check_lablog():
+        p = vega.load_plan()
+        assert p is not None, "plan.json missing"
+        idx = vega.track_today("linux")
+        d = vega.plan_day(p, idx)
+        assert d is not None, "plan day missing"
+        assert len(d.get("steps", [])) > 0, "steps empty"
+        assert "Day 10" not in d["label"], f"incorrect day: {d['label']}"
+        entry = vega.lab_entry(idx)
+        assert entry is not None, "lab_entry missing"
+    check("lablog_real_current_day", check_lablog)
 
     with open(log_path, "w", encoding="utf-8") as f:
         for r in results:

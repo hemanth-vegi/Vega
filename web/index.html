@@ -286,12 +286,26 @@
         <!-- TAB 1: LAB LOG -->
         <div id="tab-lablog" class="tab-pane active">
           <div class="card-box">
-            <div class="hub-header-row">
-              <div class="hub-label" id="lablog-track-name">LINUX LAB</div>
-              <div class="hub-day-tag" id="lablog-day-tag">Day 10</div>
+            <div class="hub-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="hub-label" id="lablog-track-name">LINUX LAB</span>
+                <span class="hub-day-tag" id="lablog-day-tag">Week 1, Day 4</span>
+                <span id="lablog-status-tag" style="font-size:11px;padding:2px 8px;border-radius:10px;background:#1e3a2f;color:#4ade80;font-weight:600;">TODAY</span>
+              </div>
+              <div class="lablog-nav" style="display:flex;align-items:center;gap:6px;">
+                <button id="lablog-prev-btn" class="mini-btn" title="Previous day">◀</button>
+                <button id="lablog-today-btn" class="mini-btn" title="Go to today's lesson">Today</button>
+                <button id="lablog-next-btn" class="mini-btn" title="Next day">▶</button>
+              </div>
             </div>
-            <div id="hub-task-text" class="hub-task-title">Loading today's milestone...</div>
-            <div id="hub-task-topic" class="hub-task-sub">...</div>
+            <div id="lablog-stats-row" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:12px;color:var(--text-muted);">
+              <span id="lablog-streak-badge" style="color:#fbbf24;font-weight:600;">🔥 Streak: 4 days</span>
+              <span>•</span>
+              <span id="lablog-progress-text">4 of 168 days done</span>
+              <span id="lablog-date-text" style="margin-left:auto;color:var(--accent);">Friday 02 October</span>
+            </div>
+            <div id="hub-task-text" class="hub-task-title">Files and folders</div>
+            <div id="hub-task-topic" class="hub-task-sub">Linux setup & file system</div>
 
             <!-- Interactive Steps Checklist -->
             <div class="steps-container">
@@ -400,6 +414,17 @@
 
         <div class="setting-row">
           <div>
+            <div class="setting-label">Wake up only for my voice</div>
+            <div class="setting-hint">Only obey Hemanth's voiceprint (reject other voices)</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="wake-only-me-check" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div>
             <div class="setting-label">Google Speech Online</div>
             <div class="setting-hint">Best speech recognition accuracy for Indian English</div>
           </div>
@@ -412,6 +437,22 @@
         <div class="setting-group">
           <label>Speech Speed (<span id="speed-val">1.0x</span>)</label>
           <input type="range" id="speech-rate-slider" min="0.8" max="1.5" step="0.1" value="1.0">
+        </div>
+
+        <!-- Microphone Diagnostic -->
+        <div class="setting-group" style="background:var(--bg-panel);padding:14px;border-radius:8px;border:1px solid var(--border-color);margin-top:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div class="setting-label">Microphone Diagnostic</div>
+              <div class="setting-hint">Record 3s to test sound level & transcription</div>
+            </div>
+            <button id="test-mic-btn" class="mini-btn accent" style="padding:6px 14px;font-size:12px;">🎤 Test microphone</button>
+          </div>
+          <div id="test-mic-results" style="display:none;margin-top:8px;padding:8px 12px;background:var(--bg-entry);border-radius:6px;font-size:12px;font-family:monospace;">
+            <div id="test-mic-status" style="color:var(--accent);">Recording 3s... speak now!</div>
+            <div id="test-mic-level" style="margin-top:4px;color:var(--text-muted);"></div>
+            <div id="test-mic-heard" style="margin-top:4px;color:#4ade80;"></div>
+          </div>
         </div>
 
         <div class="setting-divider"></div>
@@ -431,6 +472,7 @@
           <button id="create-desktop-shortcut-btn" class="modal-action-btn">Create Desktop Shortcut</button>
           <button id="open-diary-folder-btn" class="modal-action-btn">Open Diary Folder</button>
           <button id="open-docs-folder-btn" class="modal-action-btn">Open Documents Folder</button>
+          <button id="lock-vega-btn" class="modal-action-btn" style="background:#2a2333;color:#e8c27a;border:1px solid #e8c27a;">🔒 Lock Vega now</button>
           <button id="run-selftest-btn" class="modal-action-btn" style="background:#1a3a2a;color:#4ade80;border:1px solid #4ade80;">&#x1F9EA; Run Self-Test</button>
         </div>
         <div id="selftest-results" style="display:none;margin-top:12px;padding:10px;background:#111;border-radius:6px;font-size:12px;font-family:monospace;max-height:200px;overflow-y:auto;"></div>
@@ -515,6 +557,19 @@
           </div>
         </div>
       </div>
+  <!-- OPENING PASSWORD / LOCK SCREEN MODAL -->
+  <div id="lock-screen-modal" class="modal-backdrop hidden" style="z-index:99999;background:var(--bg-main,#15191F);display:flex;align-items:center;justify-content:center;">
+    <div class="modal-card" style="max-width:380px;text-align:center;padding:36px 28px;background:var(--bg-main,#15191F);border:none;box-shadow:none;">
+      <div style="font-size:32px;font-weight:700;letter-spacing:1px;color:var(--text-ink,#E6EAF0);margin-bottom:8px;">Vega</div>
+      <div style="font-size:14px;color:var(--text-muted,#8C96A3);margin-bottom:24px;">Locked. Enter your PIN.</div>
+      <div style="margin-bottom:16px;">
+        <input type="password" id="lock-pin-input" maxlength="12" placeholder="••••" autocomplete="off" style="font-size:24px;text-align:center;letter-spacing:8px;padding:10px 14px;border-radius:8px;border:1px solid var(--border-color,#2A313B);background:var(--bg-entry,#1D232B);color:var(--text-ink,#E6EAF0);width:100%;box-sizing:border-box;outline:none;">
+      </div>
+      <button id="lock-unlock-btn" class="modal-action-btn" style="width:100%;padding:12px;font-size:15px;font-weight:600;background:var(--accent,#8AB4F8);color:#15191F;border-radius:8px;border:none;cursor:pointer;margin-bottom:12px;">Unlock</button>
+      <button id="lock-voice-btn" class="modal-action-btn hidden" style="width:100%;padding:10px;font-size:13px;background:var(--bg-panel,#1C2129);color:var(--text-ink,#E6EAF0);border:1px solid var(--border-color,#2A313B);border-radius:8px;cursor:pointer;margin-bottom:8px;">Unlock with my voice</button>
+      <div id="lock-voice-hint" class="hidden" style="font-size:12px;color:var(--text-muted,#8C96A3);margin-bottom:12px;">Or just say “Hey Vega”.</div>
+      <div id="lock-error-msg" style="font-size:13px;color:#F08A7E;min-height:20px;margin-bottom:14px;"></div>
+      <div style="font-size:11px;color:var(--text-muted,#8C96A3);line-height:1.4;">Reminders and your phone link keep working while I'm locked.</div>
     </div>
   </div>
 
