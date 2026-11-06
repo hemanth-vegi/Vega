@@ -9,8 +9,13 @@
                    "Double-click the Vega icon on your desktop: the new Vega replaces the old one.";
 
   function post(url, body) {
-    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
+    const fetchFunc = (typeof window !== "undefined" && window.apiFetch) ? window.apiFetch : fetch;
+    return fetchFunc(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
       .then(async r => {
+        const contentType = r.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return r.json();
+        }
         const text = await r.text();
         try { return JSON.parse(text); }
         catch (e) { return { ok: false, error: (r.status === 404 || r.status === 405) ? OLD_COPY : `Vega error ${r.status}. Look in debug_vega.log.` }; }

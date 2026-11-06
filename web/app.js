@@ -1902,6 +1902,17 @@ document.addEventListener("DOMContentLoaded", () => {
   window.showLockScreen = showLockScreen;
   window.hideLockScreen = hideLockScreen;
 
+  async function safeFetchJson(url, options = {}) {
+    const fetchFunc = (typeof window !== "undefined" && window.apiFetch) ? window.apiFetch : fetch;
+    const r = await fetchFunc(url, options);
+    const contentType = r.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return r.json();
+    }
+    await r.text();
+    throw new Error(`Server returned an invalid response (${r.status}).`);
+  }
+
   function tryPinUnlock() {
     const pin = lockPinInput ? lockPinInput.value.trim() : "";
     if (!pin) {
@@ -1912,12 +1923,11 @@ document.addEventListener("DOMContentLoaded", () => {
       lockUnlockBtn.disabled = true;
       lockUnlockBtn.textContent = "Verifying...";
     }
-    fetch("/api/lock/verify", {
+    safeFetchJson("/api/lock/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pin: pin })
     })
-      .then(r => r.json())
       .then(res => {
         if (lockUnlockBtn) {
           lockUnlockBtn.disabled = false;
@@ -1938,7 +1948,7 @@ document.addEventListener("DOMContentLoaded", () => {
           lockUnlockBtn.disabled = false;
           lockUnlockBtn.textContent = "Unlock";
         }
-        if (lockErrorMsg) lockErrorMsg.textContent = "Error: " + err.message;
+        if (lockErrorMsg) lockErrorMsg.textContent = err.message || "Failed to verify PIN.";
       });
   }
 
@@ -1956,8 +1966,7 @@ document.addEventListener("DOMContentLoaded", () => {
       lockVoiceBtn.disabled = true;
       lockVoiceBtn.textContent = "Listening for your voice...";
       if (lockErrorMsg) lockErrorMsg.textContent = "Say 'Hey Vega' or speak now...";
-      fetch("/api/lock/voice_unlock", { method: "POST" })
-        .then(r => r.json())
+      safeFetchJson("/api/lock/voice_unlock", { method: "POST" })
         .then(res => {
           lockVoiceBtn.disabled = false;
           lockVoiceBtn.textContent = "Unlock with my voice";
@@ -1970,17 +1979,19 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(err => {
           lockVoiceBtn.disabled = false;
           lockVoiceBtn.textContent = "Unlock with my voice";
-          if (lockErrorMsg) lockErrorMsg.textContent = "Error: " + err.message;
+          if (lockErrorMsg) lockErrorMsg.textContent = err.message || "Voice check error.";
         });
     });
   }
 
   function lockVegaNow() {
-    fetch("/api/lock/now", { method: "POST" })
-      .then(r => r.json())
+    safeFetchJson("/api/lock/now", { method: "POST" })
       .then(res => {
         if (res && res.ok) showLockScreen(res.voice_unlock_ready, res.voice_reason);
         else if (res && res.error) appendNotice(res.error, "warn");
+      })
+      .catch(err => {
+        console.error("Lock now failed:", err);
       });
   }
   window.lockVegaNow = lockVegaNow;

@@ -226,6 +226,9 @@ def protect_locked_api():
 chats = store.all()
 active_chat_id = chats[0]["id"] if chats else store.new()["id"]
 
+# Ensure JSON error handlers and security middleware are active
+apply_security_middleware(bottle.default_app())
+
 # ---------------------------------------------------------------- live events to the window (Server-Sent Events)
 sse_subscribers = []
 sse_lock = threading.Lock()
