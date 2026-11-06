@@ -33,6 +33,81 @@ document.addEventListener("DOMContentLoaded", () => {
     logClientError("console.error", msg);
   };
 
+  /**
+   * Universal fetch helper that uses apiFetch (with CSRF token) and safely checks JSON response.
+   */
+  async function safeFetchJson(url, options = {}) {
+    const fetchFunc = (typeof window !== "undefined" && window.apiFetch) ? window.apiFetch : fetch;
+    const r = await fetchFunc(url, options);
+    const contentType = r.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return r.json();
+    }
+    await r.text();
+    throw new Error(`Server returned an invalid response (${r.status}).`);
+  }
+  window.safeFetchJson = safeFetchJson;
+
+  /**
+   * Reusable custom dark-themed confirmation modal returning a Promise<boolean>.
+   * Replaces native window.confirm().
+   */
+  function showConfirmModal(message, options = {}) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("confirm-modal");
+      const titleEl = document.getElementById("confirm-modal-title");
+      const msgEl = document.getElementById("confirm-modal-message");
+      const okBtn = document.getElementById("confirm-modal-ok-btn");
+      const cancelBtn = document.getElementById("confirm-modal-cancel-btn");
+      const closeBtn = document.getElementById("close-confirm-modal-btn");
+
+      if (!modal || !okBtn || !cancelBtn) {
+        resolve(window.confirm(message));
+        return;
+      }
+
+      if (titleEl) titleEl.textContent = options.title || "Confirm Action";
+      if (msgEl) msgEl.textContent = message || "Are you sure you want to proceed?";
+      if (okBtn) {
+        okBtn.textContent = options.confirmText || "Delete";
+        okBtn.className = options.danger === false ? "confirm-btn-primary" : "confirm-btn-danger";
+      }
+      if (cancelBtn) cancelBtn.textContent = options.cancelText || "Cancel";
+
+      modal.classList.remove("hidden");
+      cancelBtn.focus();
+
+      function cleanup(result) {
+        modal.classList.add("hidden");
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        if (closeBtn) closeBtn.removeEventListener("click", onCancel);
+        modal.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onKeyDown);
+        resolve(result);
+      }
+
+      function onOk() { cleanup(true); }
+      function onCancel() { cleanup(false); }
+      function onBackdrop(e) {
+        if (e.target === modal) cleanup(false);
+      }
+      function onKeyDown(e) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cleanup(false);
+        }
+      }
+
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      if (closeBtn) closeBtn.addEventListener("click", onCancel);
+      modal.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onKeyDown);
+    });
+  }
+  window.showConfirmModal = showConfirmModal;
+
   // DOM Elements
   const messagesList = document.getElementById("messages-list");
   const messagesContainer = document.getElementById("messages-container");
@@ -197,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function connectEventStream() {
     const evSource = new EventSource("/api/events");
 
-    evSource.onmessage = (e) => {
+    evSource.onmessage = async (e) => {
       try {
         const payload = JSON.parse(e.data);
         const { type, data } = payload;
@@ -249,9 +324,15 @@ document.addEventListener("DOMContentLoaded", () => {
           if (window.VegaLabLog) window.VegaLabLog.close();
           promptInput.focus();
         } else if (type === "pair_request") {
-          const ok = confirm(`${data.name} just messaged your Vega bot on Telegram.\n\nAllow this phone to control Vega?\nOnly press OK if it's YOU.`);
-          fetch("/api/phone/allow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow: ok }) })
-            .then(r => r.json()).then(res => { if (ok && res.ok) appendNotice("Phone connected. You can message Vega on Telegram now."); });
+          const ok = await showConfirmModal(`${data.name} just messaged your Vega bot on Telegram.\n\nAllow this phone to control Vega?\nOnly press Allow if it's YOU.`, {
+            title: "Telegram Phone Pairing",
+            confirmText: "Allow Phone",
+            cancelText: "Deny",
+            danger: false
+          });
+          safeFetchJson("/api/phone/allow", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow: ok }) })
+            .then(res => { if (ok && res && res.ok) appendNotice("Phone connected. You can message Vega on Telegram now."); })
+            .catch(() => {});
         }
       } catch (err) {
         console.error("SSE parse error", err);
@@ -324,46 +405,77 @@ document.addEventListener("DOMContentLoaded", () => {
     modelBadgeText.textContent = mode || "Online (Gemini)";
   }
 
+  function getAllListeningButtons() {
+    return document.querySelectorAll("#listening-toggle-btn, .listening-toggle-btn, [data-action='toggle-listening']");
+  }
+
+  function getAllSpeakingButtons() {
+    return document.querySelectorAll("#speaking-toggle-btn, .speaking-toggle-btn, [data-action='toggle-speaking']");
+  }
+
   function updateListeningUI(isOn) {
-    listeningToggleBtn.className = `badge-toggle-btn ${isOn ? "on" : "off"}`;
-    listeningText.textContent = isOn ? "Listening: ON" : "Listening: OFF";
-    wakeToggle.checked = isOn;
+    getAllListeningButtons().forEach(btn => {
+      btn.classList.toggle("on", !!isOn);
+      btn.classList.toggle("off", !isOn);
+      const dot = btn.querySelector(".mic-dot");
+      if (dot) {
+        dot.style.backgroundColor = isOn ? "#10B981" : "#EF4444";
+        dot.style.boxShadow = isOn ? "0 0 8px rgba(16, 185, 129, 0.6)" : "0 0 6px rgba(239, 68, 68, 0.45)";
+      }
+      const label = btn.querySelector("#listening-text, .listening-text");
+      if (label) {
+        label.textContent = isOn ? "Listening: ON" : "Listening: OFF";
+      }
+    });
+    if (wakeToggle) wakeToggle.checked = !!isOn;
   }
 
   function updateSpeakingUI(isOn) {
-    if (speakingToggleBtn) {
-      speakingToggleBtn.className = `badge-toggle-btn ${isOn ? "on" : "off"}`;
-    }
-    if (speakingText) {
-      speakingText.textContent = isOn ? "Speak: ON" : "Speak: OFF";
-    }
-    if (voiceToggle) {
-      voiceToggle.checked = !!isOn;
-    }
+    getAllSpeakingButtons().forEach(btn => {
+      btn.classList.toggle("on", !!isOn);
+      btn.classList.toggle("off", !isOn);
+      const dot = btn.querySelector(".speak-dot");
+      if (dot) {
+        dot.style.backgroundColor = isOn ? "#10B981" : "#EF4444";
+        dot.style.boxShadow = isOn ? "0 0 8px rgba(16, 185, 129, 0.6)" : "0 0 6px rgba(239, 68, 68, 0.45)";
+      }
+      const label = btn.querySelector("#speaking-text, .speaking-text");
+      if (label) {
+        label.textContent = isOn ? "Speak: ON" : "Speak: OFF";
+      }
+    });
+    if (voiceToggle) voiceToggle.checked = !!isOn;
   }
 
-  listeningToggleBtn.addEventListener("click", () => {
-    fetch("/api/settings/toggle_listening", { method: "POST" })
-      .then(r => r.json())
+  function handleToggleListening(e) {
+    if (e) e.stopPropagation();
+    safeFetchJson("/api/settings/toggle_listening", { method: "POST" })
       .then(res => {
         if (res && res.ok) {
           updateListeningUI(res.listening_on);
         }
-      });
+      })
+      .catch(err => console.error("Toggle listening failed:", err));
+  }
+
+  function handleToggleSpeaking(e) {
+    if (e) e.stopPropagation();
+    safeFetchJson("/api/settings/toggle_speaking", { method: "POST" })
+      .then(res => {
+        if (res && res.ok) {
+          updateSpeakingUI(res.voice_on);
+        }
+      })
+      .catch(err => console.error("Toggle speaking failed:", err));
+  }
+
+  getAllListeningButtons().forEach(btn => {
+    btn.addEventListener("click", handleToggleListening);
   });
 
-  if (speakingToggleBtn) {
-    speakingToggleBtn.addEventListener("click", () => {
-      fetch("/api/settings/toggle_speaking", { method: "POST" })
-        .then(r => r.json())
-        .then(res => {
-          if (res && res.ok) {
-            updateSpeakingUI(res.voice_on);
-          }
-        })
-        .catch(() => {});
-    });
-  }
+  getAllSpeakingButtons().forEach(btn => {
+    btn.addEventListener("click", handleToggleSpeaking);
+  });
 
   topQuickbarBtn.addEventListener("click", () => lockVegaNow());
 
@@ -1622,17 +1734,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       };
 
-      item.querySelector(".del").onclick = (e) => {
+      item.querySelector(".del").onclick = async (e) => {
         e.stopPropagation();
-        if (confirm("Delete this chat?")) {
-          fetch("/api/chat/delete", {
+        const ok = await showConfirmModal("Are you sure you want to delete this chat? This action cannot be undone.", {
+          title: "Delete Chat",
+          confirmText: "Delete",
+          cancelText: "Cancel",
+          danger: true
+        });
+        if (ok) {
+          safeFetchJson("/api/chat/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: c.id })
           }).then(() => {
             if (activeChatId === c.id) showWelcome();
             refreshChatList();
-          });
+          }).catch(err => console.error("Delete chat failed:", err));
         }
       };
 
@@ -1901,17 +2019,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.showLockScreen = showLockScreen;
   window.hideLockScreen = hideLockScreen;
-
-  async function safeFetchJson(url, options = {}) {
-    const fetchFunc = (typeof window !== "undefined" && window.apiFetch) ? window.apiFetch : fetch;
-    const r = await fetchFunc(url, options);
-    const contentType = r.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return r.json();
-    }
-    await r.text();
-    throw new Error(`Server returned an invalid response (${r.status}).`);
-  }
 
   function tryPinUnlock() {
     const pin = lockPinInput ? lockPinInput.value.trim() : "";

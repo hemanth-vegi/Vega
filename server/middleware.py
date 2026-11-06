@@ -19,13 +19,15 @@ ALLOWED_HOSTS = {
 }
 
 # Endpoints exempt from mutating X-Vega-Token check
-# (Auth handshake, SSE streaming, and pre-auth lock screen authentication)
+# (Auth handshake, SSE streaming, pre-auth lock screen, and quick voice toggles)
 EXEMPT_ROUTES = {
     "/api/auth/token",
     "/api/events",
     "/api/lock/verify",
     "/api/lock/voice_unlock",
     "/api/lock/now",
+    "/api/settings/toggle_listening",
+    "/api/settings/toggle_speaking",
 }
 
 

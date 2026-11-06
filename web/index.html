@@ -170,13 +170,13 @@
             <div class="popover-divider"></div>
             <div class="popover-section-title">VOICE & AUDIO</div>
             <div class="popover-row">
-              <button id="listening-toggle-btn" class="badge-toggle-btn on" title="Controls microphone listening">
+              <button id="listening-toggle-btn" class="badge-toggle-btn listening-toggle-btn on" data-action="toggle-listening" title="Controls microphone listening">
                 <span class="mic-dot"></span>
-                <span id="listening-text">Listening: ON</span>
+                <span id="listening-text" class="listening-text">Listening: ON</span>
               </button>
-              <button id="speaking-toggle-btn" class="badge-toggle-btn on" title="Controls Vega speaking replies">
+              <button id="speaking-toggle-btn" class="badge-toggle-btn speaking-toggle-btn on" data-action="toggle-speaking" title="Controls Vega speaking replies">
                 <span class="speak-dot"></span>
-                <span id="speaking-text">Speak: ON</span>
+                <span id="speaking-text" class="speaking-text">Speak: ON</span>
               </button>
             </div>
 
@@ -601,6 +601,17 @@
       <div class="panel-header">
         <button id="close-panel-btn" type="button" class="icon-btn" title="Close Panel" aria-label="Close Daily Hub">&times;</button>
         <span class="panel-title">Daily Hub & News</span>
+      </div>
+
+      <div class="panel-quick-controls" style="display: flex; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.2);">
+        <button class="badge-toggle-btn listening-toggle-btn on" data-action="toggle-listening" title="Controls microphone listening">
+          <span class="mic-dot"></span>
+          <span class="listening-text">Listening: ON</span>
+        </button>
+        <button class="badge-toggle-btn speaking-toggle-btn on" data-action="toggle-speaking" title="Controls Vega speaking replies">
+          <span class="speak-dot"></span>
+          <span class="speaking-text">Speak: ON</span>
+        </button>
       </div>
 
       <div class="panel-tabs">
@@ -1064,6 +1075,23 @@
             <div class="prompt-title"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h15v18H5zM2 3h3v18H2zm7 5h7m-7 4h7m-7 4h5"/></svg> Summarize Today's Diary</div>
             <div class="prompt-desc">Friendly recap of what was written today.</div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM DARK-THEMED CONFIRMATION MODAL -->
+  <div id="confirm-modal" class="modal-backdrop hidden" style="z-index: 10000;">
+    <div class="modal-card confirm-modal-card">
+      <div class="modal-header">
+        <h2 id="confirm-modal-title">Delete Chat</h2>
+        <button id="close-confirm-modal-btn" type="button" class="icon-btn" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="modal-body confirm-modal-body">
+        <p id="confirm-modal-message" class="confirm-modal-message">Are you sure you want to delete this chat? This action cannot be undone.</p>
+        <div class="confirm-modal-actions">
+          <button id="confirm-modal-cancel-btn" type="button" class="confirm-btn-cancel">Cancel</button>
+          <button id="confirm-modal-ok-btn" type="button" class="confirm-btn-danger">Delete</button>
         </div>
       </div>
     </div>
