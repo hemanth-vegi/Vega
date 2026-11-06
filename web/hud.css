@@ -1,0 +1,193 @@
+/* web/hud.css - Sunsetting Red & Amber Arc Reactor HUD Visualizer */
+
+#hud-view {
+  display: none;
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(38, 10, 18, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%);
+  z-index: 50;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #fda4af;
+  user-select: none;
+}
+
+#hud-view.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background Cyber Grid */
+.hud-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(rgba(244, 63, 94, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 63, 94, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Central Arc Reactor Container */
+.reactor-assembly {
+  position: relative;
+  width: 380px;
+  height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Outer Ring with Ticks */
+.reactor-ring-outer {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  border: 2px dashed rgba(244, 63, 94, 0.35);
+  border-radius: 50%;
+  animation: ring-rotate-cw 40s linear infinite;
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.18), inset 0 0 15px rgba(234, 88, 12, 0.12);
+}
+
+/* Middle Geometric Ring */
+.reactor-ring-mid {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border: 3px double rgba(244, 63, 94, 0.6);
+  border-top-color: #f43f5e;
+  border-bottom-color: #ea580c;
+  border-radius: 50%;
+  animation: ring-rotate-ccw 22s linear infinite;
+}
+
+/* Segmented Inner Ring */
+.reactor-ring-inner {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border: 2px dotted rgba(251, 113, 133, 0.8);
+  border-radius: 50%;
+  animation: ring-rotate-cw 12s linear infinite;
+}
+
+/* Sunset Crimson & Amber Pulsing Energy Core */
+.reactor-core {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #f43f5e 40%, #ea580c 70%, transparent 100%);
+  box-shadow: 0 0 45px #f43f5e, 0 0 90px rgba(234, 88, 12, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+  cursor: pointer;
+}
+
+.core-label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #1a0509;
+  text-shadow: 0 0 4px #ffffff;
+}
+
+/* HUD Telemetry Panels */
+.hud-telemetry-panel {
+  position: absolute;
+  background: rgba(17, 17, 21, 0.78);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+  border-radius: 10px;
+  padding: 12px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  min-width: 200px;
+}
+
+.hud-panel-top {
+  top: 30px;
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.hud-panel-left {
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.hud-panel-right {
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.hud-panel-bottom {
+  bottom: 25px;
+  width: 70%;
+  max-width: 800px;
+  text-align: center;
+}
+
+.hud-stat-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(253, 164, 175, 0.7);
+  margin-bottom: 4px;
+}
+
+.hud-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.hud-stat-value.highlight {
+  color: #fb7185;
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.7);
+}
+
+.hud-transcript-text {
+  font-size: 15px;
+  color: #ffe4e6;
+  min-height: 24px;
+  font-style: italic;
+}
+
+/* Animations */
+@keyframes ring-rotate-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ring-rotate-ccw {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+/* Telemetry Pill */
+.telemetry-pill {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: #fda4af;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

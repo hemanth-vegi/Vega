@@ -1,4 +1,3 @@
 @echo off
-cd /d C:\CloudLab\mybot
-python assistant.py
-pause
+cd /d "%~dp0"
+wscript "%~dp0Start Vega.vbs"

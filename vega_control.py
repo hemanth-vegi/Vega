@@ -9,10 +9,13 @@ Language: common Telugu / Tenglish phrases turned into commands, plus words Hema
 """
 
 import difflib
+import base64
 import os
 import re
 import subprocess
 import sys
+import threading
+import tempfile
 import time
 from datetime import datetime
 
@@ -45,59 +48,83 @@ PROTECTED = {"explorer.exe", "svchost.exe", "csrss.exe", "winlogon.exe", "winini
              "applicationframehost.exe", "shellexperiencehost.exe", "startmenuexperiencehost.exe",
              "searchhost.exe", "textinputhost.exe", "systemsettings.exe"}
 
+_media_cache = [0.0, False]
+_media_cache_lock = threading.Lock()
+_media_com = {}
+_media_com_lock = threading.Lock()
+_media_com_thread = threading.local()
+
+
+def _media_classes():
+    """The Windows audio-meter interfaces, built once (building them every half second slowly used up memory)."""
+    if _media_com:
+        return _media_com
+    with _media_com_lock:
+        if not _media_com:
+            _build_media_classes()
+    return _media_com
+
+
+def _build_media_classes():
+    """Define the COM interfaces once, even when multiple Vega threads start together."""
+    from comtypes import GUID, COMMETHOD, HRESULT, IUnknown
+    import ctypes
+    from ctypes import POINTER, c_float, c_uint
+
+    class IAudioMeterInformation(IUnknown):
+        _iid_ = GUID("{C02216F6-8C67-4B5B-9D00-D008E73E0064}")
+        _methods_ = [COMMETHOD([], HRESULT, "GetPeakValue", (['out'], POINTER(c_float), 'pfPeak'))]
+
+    class IMMDevice(IUnknown):
+        _iid_ = GUID("{D666063F-1587-4E43-81F1-B948E807363F}")
+        _methods_ = [COMMETHOD([], HRESULT, "Activate",
+                               (['in'], POINTER(GUID), 'iid'),
+                               (['in'], c_uint, 'dwClsCtx'),
+                               (['in'], ctypes.c_void_p, 'pActivationParams'),
+                               (['out'], POINTER(POINTER(IUnknown)), 'ppInterface'))]
+
+    class IMMDeviceEnumerator(IUnknown):
+        _iid_ = GUID("{A95664D2-9614-4F35-A746-DE8DB63617E6}")
+        _methods_ = [COMMETHOD([], HRESULT, "EnumAudioEndpoints"),
+                     COMMETHOD([], HRESULT, "GetDefaultAudioEndpoint",
+                               (['in'], c_uint, 'dataFlow'),
+                               (['in'], c_uint, 'role'),
+                               (['out'], POINTER(POINTER(IMMDevice)), 'ppDevice'))]
+
+    _media_com.update(meter=IAudioMeterInformation, enum=IMMDeviceEnumerator,
+                      clsid=GUID("{BCDE0395-E52F-467C-8E3D-C4579291692E}"))
+    return _media_com
+
+
 def is_media_playing():
-    """Returns True if media (YouTube, Spotify, video player) is actively outputting sound to speakers."""
+    """True if something (YouTube, Spotify, a video) is playing sound on the speakers right now.
+    Checked at most once a second, from any thread."""
     if not IS_WINDOWS:
         return False
-    try:
-        import comtypes
-        from comtypes import GUID, COMMETHOD, HRESULT, IUnknown
-        import ctypes
-        from ctypes import POINTER, c_float, c_uint
+    with _media_cache_lock:
+        now = time.monotonic()
+        if now - _media_cache[0] < 1.0:
+            return _media_cache[1]
+        playing = False
+        try:
+            import ctypes
+            import comtypes
+            if not getattr(_media_com_thread, "initialized", False):
+                try:  # COM is per-thread; initialize once instead of leaking a reference on every poll.
+                    comtypes.CoInitialize()
+                except Exception:
+                    pass
+                _media_com_thread.initialized = True
+            com = _media_classes()
+            enumerator = comtypes.CoCreateInstance(com["clsid"], interface=com["enum"], clsctx=comtypes.CLSCTX_INPROC_SERVER)
+            device = enumerator.GetDefaultAudioEndpoint(0, 1)  # 0 = speakers, 1 = multimedia
+            meter = device.Activate(ctypes.byref(com["meter"]._iid_), comtypes.CLSCTX_INPROC_SERVER, None)
+            playing = meter.QueryInterface(com["meter"]).GetPeakValue() > 0.008
+        except Exception:
+            playing = False
+        _media_cache[0], _media_cache[1] = now, playing
+        return playing
 
-        CLSID_MMDeviceEnumerator = GUID("{BCDE0395-E52F-467C-8E3D-C4579291692E}")
-        IID_IMMDeviceEnumerator = GUID("{A95664D2-9614-4F35-A746-DE8DB63617E6}")
-        IID_IAudioMeterInformation = GUID("{C02216F6-8C67-4B5B-9D00-D008E73E0064}")
-
-        class IAudioMeterInformation(IUnknown):
-            _iid_ = IID_IAudioMeterInformation
-            _methods_ = [
-                COMMETHOD([], HRESULT, "GetPeakValue",
-                          (['out'], POINTER(c_float), 'pfPeak')),
-            ]
-
-        class IMMDevice(IUnknown):
-            _iid_ = GUID("{D666063F-1587-4E43-81F1-B948E807363F}")
-            _methods_ = [
-                COMMETHOD([], HRESULT, "Activate",
-                          (['in'], POINTER(GUID), 'iid'),
-                          (['in'], c_uint, 'dwClsCtx'),
-                          (['in'], ctypes.c_void_p, 'pActivationParams'),
-                          (['out'], POINTER(POINTER(IUnknown)), 'ppInterface')),
-            ]
-
-        class IMMDeviceEnumerator(IUnknown):
-            _iid_ = IID_IMMDeviceEnumerator
-            _methods_ = [
-                COMMETHOD([], HRESULT, "EnumAudioEndpoints"),
-                COMMETHOD([], HRESULT, "GetDefaultAudioEndpoint",
-                          (['in'], c_uint, 'dataFlow'),
-                          (['in'], c_uint, 'role'),
-                          (['out'], POINTER(POINTER(IMMDevice)), 'ppDevice')),
-            ]
-
-        enumerator = comtypes.CoCreateInstance(
-            CLSID_MMDeviceEnumerator,
-            interface=IMMDeviceEnumerator,
-            clsctx=comtypes.CLSCTX_INPROC_SERVER
-        )
-        pDevice = enumerator.GetDefaultAudioEndpoint(0, 1) # 0=eRender, 1=eMultimedia
-        pMeter = pDevice.Activate(ctypes.byref(IID_IAudioMeterInformation), comtypes.CLSCTX_INPROC_SERVER, None)
-        meter = pMeter.QueryInterface(IAudioMeterInformation)
-        peak = meter.GetPeakValue()
-        return peak > 0.008
-    except Exception:
-        return False
 
 def gentle_close(proc_name_or_pid):
     """Gently close an application window (like clicking X) so it can prompt to save. Never force-kill."""
@@ -245,6 +272,26 @@ $bmp.Save($env:VEGA_SHOT, [System.Drawing.Imaging.ImageFormat]::Png)
 $g.Dispose(); $bmp.Dispose()
 Write-Output 'ok'
 """
+
+
+def take_screenshot():
+    """Capture the current desktop and return a Gemini-ready base64 PNG without keeping a copy."""
+    if not IS_WINDOWS:
+        raise RuntimeError("Screen capture is only available on Windows.")
+    with tempfile.TemporaryDirectory(prefix="vega-vision-") as folder:
+        path = os.path.join(folder, "desktop.png")
+        env = dict(os.environ, VEGA_SHOT=path)
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", SCREENSHOT_SCRIPT],
+            capture_output=True, text=True, timeout=20, env=env, creationflags=NO_WINDOW)
+        if result.returncode != 0 or not os.path.isfile(path):
+            detail = (result.stderr or result.stdout or "PowerShell did not create an image.").strip()
+            raise RuntimeError(detail[-300:])
+        with open(path, "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode("ascii")
+        if not encoded:
+            raise RuntimeError("The screen capture was empty.")
+        return {"data": encoded, "mime_type": "image/png"}
 
 
 class ControlMixin:

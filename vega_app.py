@@ -382,6 +382,13 @@ class QuickBar:
         if not query:
             return
         self.entry.delete(0, "end")
+        if self.app.locked:  # the Quick Bar must not get round the PIN lock
+            self.set_status("Locked", "you")
+            self.result_lbl.configure(text="Vega is locked. Open Vega and type your PIN (or say “Hey Vega”).")
+            if not self.result_frame.winfo_ismapped():
+                self.result_frame.pack(fill="x", pady=(8, 0))
+                self.win.geometry(f"580x190+{self.win.winfo_x()}+{self.win.winfo_y()}")
+            return
         self.set_status("Thinking...", "warn")
 
         self.result_lbl.configure(text="Processing command...")
@@ -394,14 +401,25 @@ class QuickBar:
             self.win.geometry(f"{w}x190+{x}+{y}")
 
         def worker():
-            out = self.app.vega.handle(query, source="quickbar")
+            try:
+                out = self.app.vega.handle(query)
+            except Exception as e:
+                out = {"text": f"Something went wrong: {e}", "say": "Something went wrong."}
             res_text = out.get("text", "")
+
             def update():
                 self.set_status("Ready", "ok")
                 short = res_text[:350] + ("..." if len(res_text) > 350 else "")
                 self.result_lbl.configure(text=short)
+                if out.get("lock_app"):
+                    self.hide()
+                    self.app.lock()
+                    return
+                if out.get("open_lablog"):
+                    self.app.show()
+                    self.app.open_lablog()
                 if self.app.voice_var.get() and out.get("say"):
-                    self.app.mouth.say(out.get("say"), voice_lang=out.get("voice_lang", "auto"))
+                    self.app.mouth.say(shorten_for_speech(out.get("say")))
             self.app.ui.put(update)
 
         threading.Thread(target=worker, daemon=True).start()
@@ -611,7 +629,7 @@ class App:
                                  activebackground=C["btn_hi"], activeforeground=C["ink"], relief="flat", padx=10, pady=8,
                                  cursor="hand2", anchor="w", highlightthickness=0)
         menu = tk.Menu(menu_btn, tearoff=0, bg=C["panel"], fg=C["ink"], activebackground=C["btn_hi"], activeforeground=C["ink"])
-        menu.add_command(label="⚡ Floating Quick Bar (Ctrl + Shift + V)", command=self.toggle_quickbar)
+        menu.add_command(label="⚡ Floating Quick Bar (Ctrl + Alt + Space)", command=self.toggle_quickbar)
         menu.add_command(label="Personalize Vega…", command=self.personalize)
         menu.add_command(label="Import contacts (.vcf)…", command=self.import_contacts)
         self.plan_var = tk.BooleanVar(value=bool(self.vega.cfg.get("study_plan_reminders", False)))
@@ -627,6 +645,7 @@ class App:
         menu.add_checkbutton(label="Start with Windows", variable=self.startup_var, command=self.toggle_startup)
         menu.add_command(label="Create desktop shortcut", command=self.desktop_shortcut)
         menu.add_command(label="Connect phone (Telegram)…", command=self.connect_phone)
+        menu.add_command(label="Online brain (Gemini key)…", command=self.connect_gemini)
         menu.add_separator()
         menu.add_command(label="Open documents folder", command=lambda: open_path(self.vega.doc_folder()))
         menu.add_command(label="Open diary folder", command=lambda: open_path(here("diary")))
@@ -1542,6 +1561,10 @@ class App:
         text = fix_emojis(text or "")
         if self.locked:
             return
+        if not spoken and re.fullmatch(r"[A-Za-z0-9]{4,12}", text.strip()) and sec.has_pin() and sec.check_pin(text.strip()):
+            # his PIN typed into the chat box by mistake: never save it or send it to the AI
+            self.system("That's your PIN, so I didn't save it or send it anywhere. Type it only on the lock screen.", "warn")
+            return
         self.last_activity = time.time()
         self.last_was_spoken = spoken
         self.reply_lang = self.ears.last_lang if spoken else detect_language(text)
@@ -1633,6 +1656,9 @@ class App:
             self.mouth.say(shorten_for_speech(result.get("say") or text), lang=lang)
         if getattr(self, "last_was_spoken", False):
             self.bubble("Vega", text, 12)
+        if result.get("lock_app"):  # "lock Vega": show the PIN screen now
+            self.root.after(1200, self.lock)  # after "Locking Vega." has been said
+            return
         if result.get("open_lablog"):
             self.open_lablog()
             if result.get("open_projects") and self.lablog_win:
@@ -1681,7 +1707,8 @@ class App:
     def start_hotkey(self):
         """Global shortcuts from ANY app:
         - Ctrl + Alt + V: Mic / Dictation
-        - Ctrl + Shift + V: Toggle floating Quick Bar
+        - Ctrl + Alt + Space: Toggle floating Quick Bar
+          (not Ctrl + Shift + V any more: browsers use that to paste)
         """
         if os.name != "nt":
             return
@@ -1691,11 +1718,12 @@ class App:
                 import ctypes
                 from ctypes import wintypes
                 user32 = ctypes.windll.user32
-                MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_NOREPEAT, VK_V, WM_HOTKEY = 0x1, 0x2, 0x4, 0x4000, 0x56, 0x0312
+                MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, VK_V, VK_SPACE, WM_HOTKEY = 0x1, 0x2, 0x4000, 0x56, 0x20, 0x0312
                 if not user32.RegisterHotKey(None, 1, MOD_ALT | MOD_CONTROL | MOD_NOREPEAT, VK_V):
                     vega_voice.log_problem("shortcut: Ctrl+Alt+V is already used by another app")
-                user32.RegisterHotKey(None, 2, MOD_SHIFT | MOD_CONTROL | MOD_NOREPEAT, VK_V)
-                vega_voice.log_problem("shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Shift+V (Quick Bar) registered")
+                if not user32.RegisterHotKey(None, 2, MOD_ALT | MOD_CONTROL | MOD_NOREPEAT, VK_SPACE):
+                    vega_voice.log_problem("shortcut: Ctrl+Alt+Space is already used by another app")
+                vega_voice.log_problem("shortcuts: Ctrl+Alt+V (Mic) and Ctrl+Alt+Space (Quick Bar) registered")
                 msg = wintypes.MSG()
                 while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
                     if msg.message == WM_HOTKEY:
@@ -1774,37 +1802,47 @@ class App:
             else:
                 self.bubble("Vega is locked", "Open Vega and type your PIN.", 8)
             return
-        if not (sec.voice_only() and audio is not None):
-            self.send(text, spoken=True)
+        if sec.voice_only():
+            if sec.voice_packages_missing():
+                self.system("Voice-only security is enabled, but required voice packages are missing. Install them or disable voice-only in Settings.", "warn")
+                return
+            if not sec.has_voiceprint():
+                self.system("Voice-only security is enabled, but no voiceprint was found. Record your voiceprint or disable voice-only in Settings.", "warn")
+                return
+            if audio is None:
+                self.system("Voice-only security is enabled, but no voice audio was captured to verify your identity. Please repeat the command.", "warn")
+                return
+            self.set_status("Checking it's you…", "accent")
+
+            def work():
+                try:
+                    score, err = self.voice.score(audio), None
+                except Exception as e:
+                    score, err = None, str(e)
+                self.ui.put(lambda: after(score, err))
+
+            def after(score, err):
+                self.set_status("Ready")
+                if score is not None:
+                    self.note_score(score)
+                if err or score is None:
+                    self.system(f"Voice verification failed ({err or 'scoring error'}). Command blocked for security.", "warn")
+                    return
+                if score >= min(0.24, sec.voice_threshold()) or (time.time() - self.last_verified < 300 and score >= 0.12):
+                    # verified recently or score is positive: accept command smoothly
+                    self.last_verified = time.time()
+                    self.send(text, spoken=True)
+                else:
+                    self.bubble("Vega", "That didn't sound like you, so I ignored it. Say it again.", 6)
+                    self.system(f"Heard “{text}”, but that didn't sound like Hemanth (voice match {score:.2f}, "
+                                f"needs {sec.voice_threshold():.2f}). I ignored it.\n"
+                                "Tip: say “Hey Vega” and the command together in one go, a little slower. "
+                                "Or lower the level in Menu → Voice strictness.", "warn")
+
+            threading.Thread(target=work, daemon=True).start()
             return
-        self.set_status("Checking it's you…", "accent")
 
-        def work():
-            try:
-                score, err = self.voice.score(audio), None
-            except Exception as e:
-                score, err = None, str(e)
-            self.ui.put(lambda: after(score, err))
-
-        def after(score, err):
-            self.set_status("Ready")
-            if score is not None:
-                self.note_score(score)
-            if err:
-                self.system(f"I couldn't check your voice ({err}), so I'm doing it anyway.", "warn")
-                self.send(text, spoken=True)
-            elif score >= min(0.24, sec.voice_threshold()) or (time.time() - self.last_verified < 300 and score >= 0.12):
-                # verified recently or score is positive: accept command smoothly
-                self.last_verified = time.time()
-                self.send(text, spoken=True)
-            else:
-                self.bubble("Vega", "That didn't sound like you, so I ignored it. Say it again.", 6)
-                self.system(f"Heard “{text}”, but that didn't sound like Hemanth (voice match {score:.2f}, "
-                            f"needs {sec.voice_threshold():.2f}). I ignored it.\n"
-                            "Tip: say “Hey Vega” and the command together in one go, a little slower. "
-                            "Or lower the level in Menu → Voice strictness.", "warn")
-
-        threading.Thread(target=work, daemon=True).start()
+        self.send(text, spoken=True)
 
     def wake_near_miss(self, first, second):
         """It almost heard "Hey Vega" but wasn't sure. Say so (at most every 30 seconds) so he knows to repeat."""
@@ -1858,14 +1896,10 @@ class App:
             return True
         if self.mouth.busy():
             self._last_spoke = time.time()
-        try:
-            from vega_control import is_media_playing
-            media_playing = is_media_playing()
-        except Exception:
-            media_playing = False
+        # Music or a video playing no longer makes her deaf to "Hey Vega" (that's why voice commands seemed dead).
+        # Instead, while something is playing, only a clear match with YOUR voice wakes her (see wake_voice_score).
         reason = ("answering" if self.busy else "mic in use by Vega" if self.listening else "speaking" if self.mouth.busy()
                   else "speaking" if time.time() - getattr(self, "_last_spoke", 0) < 1.2
-                  else "PAUSED: media is playing (YouTube, videos, music)" if media_playing
                   else "PAUSED: another app is using the mic (a call, WhatsApp, Meet, Zoom...)" if self.on_a_call()
                   else "LOCKED (voice unlock is off: open Vega and type your PIN)" if (self.locked and not sec.voice_unlock_ready())
                   else "")
@@ -1883,9 +1917,16 @@ class App:
         score = self.voice.score(audio)
         strong = max(0.24, min(0.28, sec.voice_threshold()))   # responsive command match for Hemanth
         low = 0.20                                            # strict floor against TV, video or ambient voices
+        enforce = bool(self.vega.cfg.get("wake_only_me", True))
+        try:
+            from vega_control import is_media_playing
+            if is_media_playing():  # a video or music is playing: only a clear match with HIS voice counts
+                low, enforce = strong, True
+        except Exception:
+            pass
         if score >= strong:
             self.last_verified = time.time()
-        return score, strong, low, bool(self.vega.cfg.get("wake_only_me", True))
+        return score, strong, low, enforce
 
     def toggle_wake_only_me(self):
         on = bool(self.wake_me_var.get())
@@ -2924,6 +2965,35 @@ class App:
         self.vega.cfg["telegram_chat_id"] = ""
         self.start_phone()
         self.system("Now open your new bot in Telegram and send it 'hi'. A box will pop up here: click Yes.")
+
+    def connect_gemini(self):
+        """Paste a new Gemini API key. It is saved only in the .env file on this laptop, never in a chat."""
+        key = simpledialog.askstring(
+            "Online brain (Gemini)",
+            "1. Open aistudio.google.com/apikey and sign in\n"
+            "2. Create API key, then copy it\n"
+            "3. Paste it here (it stays in the .env file on this laptop):",
+            show="•", parent=self.root)
+        if not key:
+            return
+        key = key.strip()
+        if len(key) < 20 or re.search(r"\s", key):
+            messagebox.showwarning("That doesn't look right", "Copy the whole key again from Google AI Studio.")
+            return
+        save_config_value("gemini_api_key", key)
+        os.environ["GEMINI_API_KEY"] = key
+        self.vega.cfg["gemini_api_key"] = key
+
+        def test():
+            try:
+                res = self.vega.gemini_chat("Reply with just the word OK.", [])
+            except Exception:
+                res = None
+            self.ui.put(lambda: self.system(
+                f"Online brain connected ({res[1]}). I'll use Gemini when you're online and the laptop model when you're not."
+                if res else "I saved the key, but Gemini didn't answer. Check the key, or your internet, and try again.",
+                "muted" if res else "warn"))
+        threading.Thread(target=test, daemon=True).start()
 
     # ---------------- settings
     def toggle_voice(self):

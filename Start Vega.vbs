@@ -1,4 +1,5 @@
-' Starts Vega without a black command window.
+' Starts Vega 2.0 (vega_webview.py) without a black command window.
+' Only one Vega can run: if she's already running, her window just comes to the front.
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 folder = fso.GetParentFolderName(WScript.ScriptFullName)

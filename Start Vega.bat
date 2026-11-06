@@ -1,3 +1,3 @@
 @echo off
-cd /d "C:\CloudLab\mybot"
-wscript "C:\CloudLab\mybot\Start Vega.vbs"
+cd /d "%~dp0"
+wscript "%~dp0Start Vega.vbs"

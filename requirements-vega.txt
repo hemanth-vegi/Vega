@@ -8,3 +8,7 @@ pypdf
 python-docx
 SpeechRecognition
 edge-tts
+bottle
+pystray
+pillow
+comtypes

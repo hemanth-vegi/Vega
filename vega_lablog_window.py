@@ -989,6 +989,15 @@ class LabLogWindow:
 
         def work():
             answer = ""
+            if image is None:  # a text question: Gemini first when online (better answers), the laptop model if not
+                try:
+                    res = self.vega.cloud_chat(msgs[-1]["content"], msgs[1:-1], system_instruction=msgs[0]["content"],
+                                                is_hard_or_code=True)
+                except Exception:
+                    res = None
+                if res and res[0]:
+                    self.app.ui.put(lambda a=res[0]: show(a, True))
+                    return
             try:
                 import ollama
                 last = 0

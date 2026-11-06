@@ -25,12 +25,15 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.parse
 import webbrowser
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
+
+_CONFIG_WRITE_LOCK = threading.RLock()
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 IS_WINDOWS = os.name == "nt"
@@ -49,11 +52,13 @@ DEFAULT_CONFIG = {
     "model": "vega",                     # your Ollama model (fast; also used to understand commands)
     "chat_model": "auto",                # "auto" = pick the best brain for each question; "" = always "model";
                                          # or a model name like "gemma3:4b" to always use that one for chatting
+    "cloud_model": "gemini-2.5-flash",
+    "cloud_smart_model": "gemini-2.5-flash",
     "doc_chars": 24000,                  # how much of a document I read (about 8 pages); bigger = slower
     "doc_context": 8192,                 # AI memory size while a document is open
     "pause_on_calls": True,              # don't listen for "Hey Vega" while another app uses the mic (calls)
     "study_plan_reminders": False,       # talk about the 24-week roadmap by itself (greeting, briefing, 9 PM check)
-    "close_action": "ask",               # the window's X button: "ask", "quit" or "hide"
+    "close_action": "hide",              # the window's X button: "ask", "quit" or "hide"
     "smart_model": "qwen2.5:7b",          # the thinking brain used by "auto" ("" = best one you have installed)
     "code_model": "qwen2.5:7b",           # used for coding / Linux command questions
     "auto_code_model": True,             # switch to code_model by itself for code questions
@@ -66,6 +71,7 @@ DEFAULT_CONFIG = {
     "telugu_model": "small",             # "small" (faster) or "medium" (better Telugu, slower)              # when a command isn't clear, ask the AI what you meant
     "wake_model": "base.en",             # model used only to hear "Hey Vega" (base.en copes with accents better than tiny.en)
     "wake_variants": [],                 # how Whisper hears your "Vega" (Menu -> Teach me your "Hey Vega")
+    "speaker_verification_enforce": False,  # require a voiceprint match before waking; off keeps recognition reliable
     "voice_on": True,                    # read answers out loud
     "wake_word_on": False,               # listen for "Hey Vega" in the background
     "speech_rate": 1,                    # -10 (slow) to 10 (fast)
@@ -165,15 +171,86 @@ def read_json(name, default):
 
 
 def write_json(name, data):
-    tmp = here(name + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, here(name))
+    write_json_file(here(name), data)
+
+
+def write_json_file(path, data):
+    """Write JSON through a unique sibling temp file, then atomically replace the target."""
+    import tempfile
+    target = os.path.abspath(path)
+    folder = os.path.dirname(target)
+    os.makedirs(folder, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix="." + os.path.basename(target) + ".", suffix=".tmp", dir=folder)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=1)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, target)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _read_config_for_update():
+    """Read settings without treating a damaged or inaccessible file as empty."""
+    path = here("config.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as exc:
+        raise RuntimeError("Could not read config.json safely; the existing settings were left unchanged.") from exc
+    if not isinstance(data, dict):
+        raise RuntimeError("config.json does not contain a settings object; the existing file was left unchanged.")
+    return data
 
 
 def strip_thinking(text):
     """Some models (like qwen3) 'think out loud' inside <think> tags first. Hide that."""
     return re.sub(r"<think>.*?(</think>|$)", "", text or "", flags=re.S).lstrip()
+
+
+# Backup free brains (all OpenAI-compatible). Vega asks Gemini first, then these in order, then the laptop model.
+# Model names change often, so Vega asks each provider which models it has right now and picks the best match.
+EXTRA_PROVIDERS = {
+    "groq": {"label": "Groq", "env": "GROQ_API_KEY", "base": "https://api.groq.com/openai/v1",
+             "easy": ["llama-3.1-8b", "llama-3.3-70b", "gpt-oss-20b"],
+             "hard": ["llama-3.3-70b", "gpt-oss-120b", "qwen", "llama-4"],
+             "skip": ["whisper", "guard", "tts", "playai", "orpheus", "compound", "safeguard", "embed"]},
+    "cerebras": {"label": "Cerebras", "env": "CEREBRAS_API_KEY", "base": "https://api.cerebras.ai/v1",
+                 "easy": ["llama3.1-8b", "llama-3.3-70b", "gpt-oss"],
+                 "hard": ["gpt-oss-120b", "llama-3.3-70b", "qwen-3", "llama"],
+                 "skip": ["guard", "embed"]},
+    "openrouter": {"label": "OpenRouter", "env": "OPENROUTER_API_KEY", "base": "https://openrouter.ai/api/v1",
+                   "easy": ["gemma", "llama-3.3-70b", "gpt-oss", "qwen"],
+                   "hard": ["llama-3.3-70b", "gpt-oss-120b", "qwen3", "deepseek", "gemma"],
+                   "skip": ["vision", "image", "embed", "guard", "audio", "lyria"], "free_only": True},
+    "mistral": {"label": "Mistral", "env": "MISTRAL_API_KEY", "base": "https://api.mistral.ai/v1",
+                "easy": ["mistral-small", "open-mistral-nemo", "ministral"],
+                "hard": ["mistral-large", "mistral-medium", "mistral-small"],
+                "skip": ["embed", "moderation", "ocr", "voxtral", "codestral", "pixtral"]},
+    "nvidia": {"label": "NVIDIA", "env": "NVIDIA_API_KEY", "base": "https://integrate.api.nvidia.com/v1",
+               "easy": ["llama-3.1-8b", "llama-3.3-70b", "mistral-small", "nemotron"],
+               "hard": ["deepseek", "llama-3.3-70b", "qwen", "mistral-large", "nemotron"],
+               "skip": ["embed", "vision", "vl", "guard", "reward", "rerank", "parse", "clip", "safety", "retriev",
+                        "translate", "riva", "diffusion", "image", "whisper", "tts", "asr", "code"]},
+}
+EXTRA_ENV_KEYS = {p["env"] for p in EXTRA_PROVIDERS.values()}
+
+
+def log_debug_brain(text):
+    """One line in debug_vega.log about the online brains (never the key)."""
+    try:
+        with open(here("debug_vega.log"), "a", encoding="utf-8") as f:
+            clean = re.sub(r"key=[^&\s]+", "key=***", str(text))[:300]
+            f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " [BRAIN] " + clean + "\n")
+    except Exception:
+        pass
 
 
 def load_env():
@@ -190,13 +267,13 @@ def load_env():
                     if line and not line.startswith("#") and "=" in line:
                         k, v = line.split("=", 1)
                         k, v = k.strip(), v.strip()
-                        if k in ("TELEGRAM_TOKEN", "GEMINI_API_KEY"):
+                        if k in ("TELEGRAM_TOKEN", "GEMINI_API_KEY") or k in EXTRA_ENV_KEYS:
                             os.environ[k] = v
         except Exception:
             pass
 
 
-def save_env_value(key, value):
+def _save_env_value_unlocked(key, value):
     """Save API keys into .env instead of config.json, preserving .gitignore security."""
     env_file = here(".env")
     if not os.path.exists(env_file) and os.path.exists(r"C:\CloudLab\mybot\.env"):
@@ -210,27 +287,53 @@ def save_env_value(key, value):
                     if line and not line.startswith("#") and "=" in line:
                         k, v = line.split("=", 1)
                         current[k.strip()] = v.strip()
-        except Exception:
-            pass
+        except OSError:
+            raise
     current[key] = str(value).strip()
+    folder = os.path.dirname(os.path.abspath(env_file))
+    fd, tmp = tempfile.mkstemp(prefix=".env.", suffix=".tmp", dir=folder)
     try:
-        with open(env_file, "w", encoding="utf-8") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             for k, v in current.items():
                 f.write(f"{k}={v}\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, env_file)
     except Exception:
-        pass
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
     os.environ[key] = str(value).strip()
-def load_config():
+
+
+def save_env_value(key, value):
+    """Serialize .env read/modify/write operations with config updates."""
+    with _CONFIG_WRITE_LOCK:
+        return _save_env_value_unlocked(key, value)
+
+
+def _load_config_unlocked():
     """Read config.json, filling in anything missing from the defaults and loading keys from .env."""
     load_env()
-    user = read_json("config.json", None)
+    user = _read_config_for_update()
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+    env_save_failed = False
     if isinstance(user, dict):
         # If keys accidentally still in config.json, migrate to .env
         if "telegram_token" in user and user["telegram_token"]:
-            save_env_value("TELEGRAM_TOKEN", user.pop("telegram_token"))
+            try:
+                save_env_value("TELEGRAM_TOKEN", user["telegram_token"])
+                user.pop("telegram_token")
+            except OSError:
+                env_save_failed = True
         if "gemini_api_key" in user and user["gemini_api_key"]:
-            save_env_value("GEMINI_API_KEY", user.pop("gemini_api_key"))
+            try:
+                save_env_value("GEMINI_API_KEY", user["gemini_api_key"])
+                user.pop("gemini_api_key")
+            except OSError:
+                env_save_failed = True
         for k, v in user.items():
             if isinstance(v, dict) and isinstance(cfg.get(k), dict):
                 cfg[k].update({str(a).lower(): b for a, b in v.items()})
@@ -240,6 +343,8 @@ def load_config():
     # Keys come strictly from .env / environment
     cfg["telegram_token"] = os.environ.get("TELEGRAM_TOKEN", "")
     cfg["gemini_api_key"] = os.environ.get("GEMINI_API_KEY", "")
+    for _name, _p in EXTRA_PROVIDERS.items():
+        cfg[_name + "_api_key"] = os.environ.get(_p["env"], "")
 
     if cfg.get("config_version", 1) < 2:
         if cfg.get("whisper_model") in ("base.en", "tiny.en"):
@@ -275,16 +380,41 @@ def load_config():
     if cfg.get("config_version", 1) < 9:
         cfg.setdefault("cloud_speech", True)
         cfg["config_version"] = 9
+    if cfg.get("config_version", 1) < 10:
+        # The X button keeps Vega running (reminders, "Hey Vega", phone) instead of quitting her.
+        if cfg.get("close_action") in (None, "quit", "ask"):
+            cfg["close_action"] = "hide"
+        # "Just talk" (no "Hey Vega") made her answer the TV, videos and people nearby. Back to "Hey Vega" first.
+        cfg["talk_without_wake"] = False
+        cfg["config_version"] = 10
+    if cfg.get("config_version", 1) < 11:
+        # Back like before: with Vega's window in front, just talk (no "Hey Vega"). Videos, calls, other voices,
+        # one-word mumbles and clicks are still ignored.
+        cfg["talk_without_wake"] = True
+        cfg["config_version"] = 11
+    if cfg.get("config_version", 1) < 12:
+        # A recognized wake word is enough by default; voiceprint enforcement can be enabled in Settings.
+        cfg.setdefault("speaker_verification_enforce", False)
+        cfg["config_version"] = 12
 
     # Save stripped config.json (never write keys to config.json)
     save_cfg = json.loads(json.dumps(cfg))
     save_cfg.pop("telegram_token", None)
     save_cfg.pop("gemini_api_key", None)
-    write_json("config.json", save_cfg)
+    for _name in EXTRA_PROVIDERS:
+        save_cfg.pop(_name + "_api_key", None)
+    if not env_save_failed:
+        write_json("config.json", save_cfg)
     return cfg
 
 
-def save_config_value(key, value):
+def load_config():
+    """Load and migrate config while excluding concurrent settings writes."""
+    with _CONFIG_WRITE_LOCK:
+        return _load_config_unlocked()
+
+
+def _save_config_value_unlocked(key, value):
     """Save a config value. API keys are redirected to .env."""
     if key == "telegram_token":
         save_env_value("TELEGRAM_TOKEN", value)
@@ -292,11 +422,22 @@ def save_config_value(key, value):
     if key == "gemini_api_key":
         save_env_value("GEMINI_API_KEY", value)
         return
-    cfg = read_json("config.json", {}) or {}
+    if key.endswith("_api_key") and key[:-8] in EXTRA_PROVIDERS:
+        save_env_value(EXTRA_PROVIDERS[key[:-8]]["env"], value)
+        return
+    cfg = _read_config_for_update() or {}
     cfg.pop("telegram_token", None)
     cfg.pop("gemini_api_key", None)
+    for _name in EXTRA_PROVIDERS:
+        cfg.pop(_name + "_api_key", None)
     cfg[key] = value
     write_json("config.json", cfg)
+
+
+def save_config_value(key, value):
+    """Save one setting without losing a concurrent setting update."""
+    with _CONFIG_WRITE_LOCK:
+        return _save_config_value_unlocked(key, value)
 
 
 # ---------------------------------------------------------------- helpers
@@ -747,17 +888,54 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
                      "like", "i", "you", "we", "he", "she", "they", "said", "say", "mean", "meant", "not", "no", "yes", "what",
                      "why", "how", "this", "that", "was", "are", "be", "do", "did", "have", "has", "can", "will", "so", "but", "or"}
 
-    def handle(self, text, source="laptop", on_token=None, spoken=False):
+    def handle(self, text, source="laptop", on_token=None, spoken=False, images=None, preferred_provider=None, preferred_model=None):
         raw = (text or "").strip()
         self._last_raw = raw.lower()
-        prev = getattr(self, "prev_user_raw", None)
-        if raw and not self.diary_mode and prev:
-            fixed = self.correction(clean_command(raw), prev, source, on_token, spoken)
-            if fixed is not None:
-                return fixed
-        if raw:
-            self.prev_user_raw = raw
-        return self._handle(text, source, on_token, spoken)
+        self._last_user_prompt = raw
+        self._preferred_provider = preferred_provider
+        self._preferred_model = preferred_model
+        try:
+            if raw and source == "laptop" and not images and self.screen_analysis_requested(raw):
+                try:
+                    from vega_control import take_screenshot
+                    screenshot = take_screenshot()
+                except Exception as e:
+                    log_debug_brain(f"screen analysis capture failed: {e}")
+                    return reply("I couldn't capture the screen. Please try again, or attach a screenshot.")
+                self.prev_user_raw = raw
+                return self.chat(
+                    raw, source, on_token,
+                    instruction=("Analyze the attached screenshot of Hemanth's active desktop. Describe only what is visible. "
+                                 "For errors or code, identify the visible message and give a concrete next step. "
+                                 "If the text is too small or obscured, say what you can read and ask for a closer screenshot."),
+                    images=[screenshot],
+                    preferred_provider=preferred_provider,
+                    preferred_model=preferred_model)
+            prev = getattr(self, "prev_user_raw", None)
+            if raw and not self.diary_mode and prev and not images:
+                fixed = self.correction(clean_command(raw), prev, source, on_token, spoken)
+                if fixed is not None:
+                    return fixed
+            if raw:
+                self.prev_user_raw = raw
+            return self._handle(text, source, on_token, spoken, images=images,
+                                preferred_provider=preferred_provider, preferred_model=preferred_model)
+        finally:
+            self._preferred_provider = None
+            self._preferred_model = None
+
+    @staticmethod
+    def screen_analysis_requested(text):
+        """Capture the screen only when the laptop user clearly asks Vega to inspect it."""
+        text = (text or "").strip().lower()
+        patterns = (
+            r"\blook\s+at\s+(?:(?:my|the)\s+)?screen\b",
+            r"\bwhat(?:'s|\s+is)\s+(?:on|in)\s+(?:(?:my|the)\s+)?screen\b",
+            r"\bcheck\b.{0,80}\bon\s+(?:(?:my|the)\s+)?screen\b",
+            r"\bread\s+what(?:'s|\s+is)\s+open\b",
+            r"\bwhy\s+is\s+my\s+unity\s+script\s+(?:failing|broken|erroring|not\s+working)\b",
+        )
+        return any(re.search(pattern, text, re.I) for pattern in patterns)
 
     def correction(self, t, prev, source, on_token, spoken):
         """He's correcting what Vega heard or did. Redo it right, and offer to learn the fix."""
@@ -820,15 +998,17 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             out["text"] = note + out["text"]
         return out
 
-    def _handle(self, text, source="laptop", on_token=None, spoken=False):
+    def _handle(self, text, source="laptop", on_token=None, spoken=False, images=None, preferred_provider=None, preferred_model=None):
         """
         Understand one message and answer it.
         source: "laptop" or "phone".  on_token(text_so_far) streams AI replies.
         Returns {"text": ..., "say": ...}.
         """
         raw = (text or "").strip()
-        if not raw:
+        if not raw and not images:
             return reply("I didn't catch that.")
+        if images:
+            return self.chat(raw, source, on_token, images=images, preferred_provider=preferred_provider, preferred_model=preferred_model)
         t = clean_command(raw)
 
         # Fix verb typos like "opm" -> "open" even when typed
@@ -890,6 +1070,11 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
         out = self.words_command(t, raw)  # teaching her words comes before using them
         if out is not None:
             return out
+        # "oprn lab log in our vega", "its lab log", "lab log please": typos and short ways to ask for the Lab Log
+        if len(t.split()) <= 8 and re.search(r"\b(?:lab ?log|lablog|lag log|lap log)\b", t) and re.match(
+                r"^(?:please\s+)?(?:open|oprn|opne|opn|opem|oepn|ope|pen|ipen|show|go to|start|it'?s|its|lab|lablog|lag|lap|the|my|our|today'?s)\b", t) \
+                and not re.search(r"\b(?:close|how|what|why|explain|delete|remove)\b", t):
+            return reply("Opening your Lab Log.", "Opening your Lab Log.", open_lablog=True)
         # his own words and Telugu / Tenglish phrases -> Vega's English commands
         t2 = tenglish_to_command(self.apply_my_words(t))
         if t2 != t:
@@ -912,7 +1097,7 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
                         return out
         if unknown is not None:
             return unknown
-        out = self.chat(raw, source, on_token)
+        out = self.chat(raw, source, on_token, images=images, preferred_provider=preferred_provider, preferred_model=preferred_model)
         fact = self.memory_suggestion(raw) if out.get("kind") == "chat" else None
         if fact:
             self.pending_memory = (fact, time.time() + 300)
@@ -1044,10 +1229,20 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             "Never invent a command that is not in the list."
         )
         try:
-            router = self.smart_model() if self.cfg.get("one_brain", True) else self.cfg["model"]
-            r = ollama.chat(model=router, format="json", keep_alive="15m", options={"temperature": 0},
-                            messages=[{"role": "system", "content": prompt}, {"role": "user", "content": raw}])
-            content = r["message"]["content"] if isinstance(r, dict) else r.message.content
+            content = ""
+            # Online: Gemini (or a backup brain) is much faster than waking up the laptop model
+            if not self.cfg.get("private_mode", False):
+                try:
+                    self.stop_flag.clear()
+                    res = self.cloud_chat(raw, [], system_instruction=prompt, is_hard_or_code=False)
+                    content = res[0] if res else ""
+                except Exception:
+                    content = ""
+            if not re.search(r'"command"', content or ""):
+                router = self.smart_model() if self.cfg.get("one_brain", True) else self.cfg["model"]
+                r = ollama.chat(model=router, format="json", keep_alive="15m", options={"temperature": 0},
+                                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": raw}])
+                content = r["message"]["content"] if isinstance(r, dict) else r.message.content
             clean_json = re.sub(r"^```(?:json)?\s*|\s*```$", "", (content or "").strip(), flags=re.I).strip()
             m = re.search(r"\{.*?\}", clean_json, re.S)
             data = json.loads(m.group(0) if m else clean_json)
@@ -1066,6 +1261,18 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
            re.match(r"^(?:you there|listening)\??$", t):
             return reply("I'm right here and listening, Hemanth! What can I help you with?",
                          "I'm listening, Hemanth! What's up?")
+        return None
+
+    def speak_answers_command(self, t, raw):
+        """'speak answers on' / 'speak answers off' / 'mute voice' / 'unmute voice' / 'read answers out loud'."""
+        off = re.search(r"^(?:please\s+)?(?:turn\s+off\s+(?:the\s+)?(?:voice|speak\s+answers|speech)|(?:speak\s+answers|voice|speech)\s+off|stop\s+(?:speaking|talking)(?:\s+answers)?|don'?t\s+speak(?:\s+answers)?|do\s+not\s+speak(?:\s+answers)?|mute\s+(?:voice|speech|answers)|silent\s+mode|quiet\s+mode)$", t)
+        on = re.search(r"^(?:please\s+)?(?:turn\s+on\s+(?:the\s+)?(?:voice|speak\s+answers|speech)|(?:speak\s+answers|voice|speech)\s+on|start\s+(?:speaking|talking)(?:\s+answers)?|speak\s+answers|unmute\s+(?:voice|speech|answers)|read\s+answers(?:\s+out\s+loud)?|speak(?:\s+out)?\s+loud)$", t)
+        if off:
+            return reply("Okay, I won't speak answers out loud. My replies will be shown on screen only.",
+                         "Okay, I stopped speaking answers.", voice_on=False)
+        if on:
+            return reply("Okay, I'll speak my answers out loud from now on.",
+                         "Okay, I'll speak answers out loud now.", voice_on=True)
         return None
 
     def voice_language(self, t, raw):
@@ -1094,7 +1301,7 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
 
     def run_skills(self, t, raw, source, on_token, allow_unknown=True):
         """Try every skill. Returns an answer, or None if nothing matched."""
-        skills = (self.help, self.remember_it, self.listening_command, self.voice_language, self.words_command, self.lablog_command, self.projects_command, self.summarize, self.briefing, self.internships, self.time_and_date, self.notebook,
+        skills = (self.help, self.remember_it, self.listening_command, self.speak_answers_command, self.voice_language, self.words_command, self.lablog_command, self.projects_command, self.summarize, self.briefing, self.internships, self.time_and_date, self.notebook,
                   self.diary_command, self.todo, self.tracking, self.reminders, self.phone_call, self.contacts, self.vm, self.devops_command,
                   self.lock_screen, self.laptop_status, self.documents, self.laptop_control, self.weather, self.news,
                   self.search_and_play, self.sites_command, self.open_thing, self.plan, self.wikipedia)
@@ -1193,9 +1400,9 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
         gloss = self.tenglish_gloss(str(getattr(self, "_last_raw", "")))
         if gloss:
             notes.append("Telugu words in my last message (Tenglish): " + "; ".join(gloss) + ". Use these meanings.")
-        notes.append("I sometimes write in Telugu or Tenglish (Telugu in English letters, like 'naaku help cheyyi'). "
-                     "Understand it, and always reply in simple English (English letters only, never Telugu script), because I read English best. "
-                     + ("Your answers are turned into a Telugu voice by the app, so if I ask, yes, you can speak Telugu." if self.cfg.get("speak_telugu") else ""))
+        notes.append("I sometimes use Telugu script or Tenglish (Telugu in English letters, like 'naaku help cheyyi'). "
+                     "Understand it and match my language naturally. Prefer Latin letters for Tenglish and keep technical terms in English; "
+                     "use Telugu script when I write in Telugu script. Reply in English when I speak English.")
         if instruction:
             notes.append(instruction)
         return "\n\n".join(notes)
@@ -1348,31 +1555,89 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
         return chosen or main
 
     def personality(self):
-        """Vega's personality and system prompt: as clear and correct as ChatGPT or Claude."""
+        """Vega's personal assistant and engineering tutor guidance."""
         facts_list = self.facts()
         facts_text = ("- " + "\n- ".join(facts_list)) if facts_list else "None recorded yet."
         my_prompt = str((read_json("personal.json", {}) or {}).get("prompt", "")).strip()[:4000]
         extra = f"\n\nHemanth\'s custom instructions:\n{my_prompt}" if my_prompt else ""
         return (
-            "You are Vega, Hemanth\'s personal AI assistant, running directly on his Windows laptop (HP Victus).\n"
-            "Your answers must be as clear, intelligent, and accurate as ChatGPT and Claude.\n\n"
+            "You are Vega, Hemanth's personal AI partner on his Windows laptop (HP Victus): quick, dependable, warm, and technically sharp.\n"
+            "Help with everyday desktop tasks and act as an excellent computer science, Unity, Linux, cloud, and DevOps tutor.\n\n"
             "CORE RULES:\n"
-            "1. Tone & Style: Be warm, intelligent, and concise. Give short, direct answers for simple questions. "
-            "Provide clear, step-by-step explanations for how-to questions.\n"
-            "2. Code: Always put code inside Markdown code blocks with the correct language identifier (e.g., ```python, ```c, ```powershell).\n"
-            "3. Honesty: Be completely honest when unsure or when you do not know something. Never invent facts.\n"
-            "4. Emojis: Do NOT use emojis unless Hemanth uses them first in his message.\n"
-            "5. Windows Environment: You run on Hemanth\'s Windows laptop. NEVER give Linux or terminal commands for him to run on his laptop. "
+            "1. Tone & Style: Be warm, adaptive, and concise for simple requests. For lessons, explain the idea first, use a familiar analogy, "
+            "then build the steps from cause to effect. For engineering questions, include a small working example and explain how to verify it.\n"
+            "2. Tutoring: Teach for understanding instead of dumping facts. Use Socratic questions when they help Hemanth reason through a problem, "
+            "but answer direct questions fully before asking a follow-up. Scale depth to the request and define unfamiliar terms.\n"
+            "3. Code: Put code inside Markdown code blocks with the correct language identifier (e.g., ```python, ```c, ```powershell). "
+            "Explain important lines and mention assumptions that affect whether it runs.\n"
+            "4. Language: Reply in clear English to English. When Hemanth uses Telugu script or Tenglish, understand the meaning and reply naturally "
+            "in the same register, keeping common technical terms in English. Prefer Latin letters for Tenglish unless he writes in Telugu script or asks for it.\n"
+            "5. Honesty: Be clear about uncertainty and never invent facts.\n"
+            "6. Emojis: Do NOT use emojis unless Hemanth uses them first in his message.\n"
+            "7. Windows Environment: You run on Hemanth's Windows laptop. NEVER give Linux or terminal commands for him to run on his laptop. "
             "Never tell him to run `kill -9`, `rm -rf`, `sudo`, `cat`, or `grep` for Windows tasks. Use PowerShell commands when needed.\n"
-            "6. Unsupported Actions: If Hemanth asks you for a laptop action or automation that you cannot do, reply in exactly one line:\n"
+            "8. Unsupported Actions: If Hemanth asks you for a laptop action or automation that you cannot do, reply in exactly one line:\n"
             "\'I can\'t do that yet, Hemanth. Want me to learn it?\'\n"
-            "7. Language & Tenglish: If Hemanth speaks or writes in Tenglish (Telugu in English script), reply in natural, friendly Tenglish. "
-            "If he writes in English, reply in English.\n"
-            "8. Personal Facts: Use these facts about Hemanth naturally in conversation when relevant, without awkwardly reciting them:\n"
+            "9. Personal Facts: Use these facts about Hemanth naturally when relevant, without awkwardly reciting them:\n"
             f"{facts_text}{extra}"
         )
 
-    def gemini_chat(self, text, history, on_token=None, system_instruction=None, is_hard_or_code=False):
+    # ---------------- limits: remember who is out of free messages, and say so
+    def _cool_until(self, name):
+        return self.__dict__.setdefault("_cool_map", {}).get(name, 0)
+
+    def _cool(self, name, response=None, default=300, quiet=False):
+        """A brain said "too many requests": leave it alone for a while (as long as it asks, up to an hour)."""
+        secs = default
+        try:
+            ra = (response.headers.get("retry-after") if response is not None else None)
+            if ra:
+                secs = max(30, min(3600, int(float(ra))))
+        except Exception:
+            pass
+        self.__dict__.setdefault("_cool_map", {})[name] = time.time() + secs
+        if not quiet:
+            self.__dict__.setdefault("_limited_now", []).append(name)
+            self.__dict__.setdefault("_limit_kind", {})[name] = "limit"
+        else:
+            self.__dict__.setdefault("_limit_kind", {})[name] = "missing"
+
+    def _tell(self, text):
+        """Show a small grey line in the chat (once every 10 minutes per message)."""
+        seen = self.__dict__.setdefault("_told", {})
+        if time.time() - seen.get(text, 0) < 600:
+            return
+        seen[text] = time.time()
+        cb = getattr(self, "on_notice", None)
+        if cb:
+            try:
+                cb(text)
+            except Exception:
+                pass
+
+    def brain_status(self):
+        """For Settings: every online brain, and whether it is ready, out of free messages, or has no key."""
+        out = []
+        now = time.time()
+        gk = (self.cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
+        kinds = self.__dict__.get("_limit_kind", {})
+        rows = [("Gemini", bool(gk), [k for k in self.__dict__.get("_cool_map", {})
+                                      if k.startswith("gemini") and kinds.get(k) == "limit"])]
+        for n, p in EXTRA_PROVIDERS.items():
+            rows.append((p["label"], bool((self.cfg.get(n + "_api_key") or os.environ.get(p["env"], "")).strip()), [n]))
+        for label, has_key, names in rows:
+            until = max([self._cool_until(k) for k in names] or [0])
+            if not has_key:
+                out.append({"name": label, "state": "nokey", "text": "no key yet"})
+            elif until > now:
+                out.append({"name": label, "state": "limit",
+                            "text": f"free limit used up, back about {time.strftime('%H:%M', time.localtime(until))}"})
+            else:
+                out.append({"name": label, "state": "ready", "text": "ready"})
+        out.append({"name": "Laptop (Qwen)", "state": "ready", "text": "always there, no limits"})
+        return out
+
+    def gemini_chat(self, text, history, on_token=None, system_instruction=None, is_hard_or_code=False, images=None, model=None):
         """Call Google Gemini REST API. Returns (answer, model_name) on success, or None on failure/offline."""
         import requests
         api_key = self.cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
@@ -1382,16 +1647,21 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
         # Preferred models verified to work on the user's key
         if is_hard_or_code:
             models = [
+                "gemini-2.5-flash",
+                "gemini-flash-latest",
                 self.cfg.get("cloud_smart_model") or "gemini-3-flash-preview",
-                "gemini-3.6-flash",
-                "gemini-3.5-flash-lite",
+                "gemini-3-flash-preview",
             ]
         else:
             models = [
+                "gemini-2.5-flash",
+                "gemini-flash-latest",
                 self.cfg.get("cloud_model") or "gemini-3.5-flash-lite",
                 "gemini-3-flash-preview",
-                "gemini-3.1-flash-lite-preview",
             ]
+        models = list(dict.fromkeys(models))  # no model twice
+        if model and model != "auto":
+            models = [model] + [m for m in models if m != model]
 
         contents = []
         for m in history:
@@ -1401,7 +1671,25 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
                 clean_text = re.sub(r"^\[\d{1,2}\s+[A-Za-z]{3}\s+\d{4}[^\]]*\]\s*", "", msg_text)
                 contents.append({"role": role, "parts": [{"text": clean_text}]})
 
-        contents.append({"role": "user", "parts": [{"text": text}]})
+        user_parts = []
+        if images:
+            for img in images:
+                if not isinstance(img, dict):
+                    continue
+                d = img.get("data") or ""
+                mime = img.get("mime_type") or "image/png"
+                if "," in d:
+                    d = d.split(",", 1)[1]
+                d = d.strip()
+                if d:
+                    user_parts.append({
+                        "inlineData": {
+                            "mimeType": mime,
+                            "data": d
+                        }
+                    })
+        user_parts.append({"text": text or "Please review the attached screenshots and files."})
+        contents.append({"role": "user", "parts": user_parts})
 
         payload = {
             "contents": contents,
@@ -1416,27 +1704,224 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             }
 
         for model in models:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            if self._cool_until("gemini:" + model) > time.time():
+                continue  # this model is out of free messages for now
+            # Streaming: words appear as soon as Gemini writes them (and long answers never hit the timeout)
+            url = (f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent"
+                   f"?alt=sse&key={api_key}")
+            answer = ""
             try:
-                r = requests.post(url, json=payload, timeout=12)
-                if r.status_code == 200:
-                    data = r.json()
-                    cands = data.get("candidates", [])
-                    if cands:
-                        parts = cands[0].get("content", {}).get("parts", [])
-                        if parts:
-                            ans = parts[0].get("text", "").strip()
-                            if ans:
-                                if on_token:
-                                    on_token(ans)
-                                return ans, model
-                elif r.status_code in (429, 503):
-                    continue
-            except Exception:
-                continue
+                with requests.post(url, json=payload, stream=True, timeout=(4, 9)) as r:
+                    if r.status_code == 429:
+                        self._cool("gemini:" + model, r, default=90)
+                        continue
+                    if r.status_code == 404:  # this model doesn't exist (any more): skip it for a day, quietly
+                        self._cool("gemini:" + model, None, default=86400, quiet=True)
+                        continue
+                    if r.status_code != 200:
+                        log_debug_brain(f"gemini {model}: HTTP {r.status_code}")
+                        continue
+                    r.encoding = "utf-8"
+                    for line in r.iter_lines(chunk_size=1, decode_unicode=True):
+                        if not line or not line.startswith("data:"):
+                            continue
+                        try:
+                            chunk = json.loads(line[5:].strip())
+                        except ValueError:
+                            continue
+                        for cand in chunk.get("candidates", [])[:1]:
+                            for part in cand.get("content", {}).get("parts", []):
+                                if part.get("text") and not part.get("thought"):
+                                    answer += part["text"]
+                        if answer and on_token:
+                            on_token(answer)
+                        if self.stop_flag.is_set():
+                            answer += " …(stopped)"
+                            break
+            except Exception as e:
+                log_debug_brain(f"gemini {model}: {e}")
+                if isinstance(e, (requests.exceptions.Timeout, requests.exceptions.ConnectionError)):
+                    return None  # hand a slow/unreachable cloud request to the backup providers immediately
+            answer = answer.strip()
+            if answer:
+                return answer, model
         return None
 
-    def ollama_chat(self, text, history, on_token=None, system_instruction=None, model=None):
+    def extra_keys(self):
+        """The backup free providers that have a key saved."""
+        return [n for n, p in EXTRA_PROVIDERS.items()
+                if (self.cfg.get(n + "_api_key") or os.environ.get(p["env"], "")).strip()]
+
+    def _provider_models(self, name):
+        """Chat models this provider offers right now (asked once an hour, then remembered)."""
+        import requests
+        cache = self.__dict__.setdefault("_pm_cache", {})
+        hit = cache.get(name)
+        if hit and time.time() - hit[0] < 3600:
+            return hit[1]
+        p = EXTRA_PROVIDERS[name]
+        key = (self.cfg.get(name + "_api_key") or os.environ.get(p["env"], "")).strip()
+        ids = []
+        try:
+            r = requests.get(p["base"] + "/models", headers={"Authorization": "Bearer " + key}, timeout=5)
+            if r.status_code == 200:
+                for m in (r.json().get("data") or []):
+                    mid = str(m.get("id") or "")
+                    low = mid.lower()
+                    if not mid or any(w in low for w in p["skip"]):
+                        continue
+                    if p.get("free_only") and not low.endswith(":free"):
+                        continue
+                    ids.append(mid)
+        except Exception:
+            pass
+        if ids:
+            cache[name] = (time.time(), ids)
+        return ids
+
+    @staticmethod
+    def _rank_models(ids, wanted):
+        """Put the models that match our wishes first (in the order of the wish list), then the rest."""
+        out = []
+        for w in wanted:
+            for mid in ids:
+                if w in mid.lower() and mid not in out:
+                    out.append(mid)
+        return out + [m for m in ids if m not in out]
+
+    def extra_chat(self, text, history, on_token=None, system_instruction=None, is_hard_or_code=False, only=None, model=None):
+        """Backup free brains (Groq, Cerebras, OpenRouter, Mistral). Returns (answer, "Provider: model") or None."""
+        import requests
+        if self.cfg.get("private_mode", False):
+            return None
+        msgs = []
+        if system_instruction:
+            msgs.append({"role": "system", "content": system_instruction})
+        for m in history:
+            c = m.get("content", "")
+            if c:
+                msgs.append({"role": "user" if m.get("role") == "user" else "assistant",
+                             "content": re.sub(r"^\[\d{1,2}\s+[A-Za-z]{3}\s+\d{4}[^\]]*\]\s*", "", c)})
+        msgs.append({"role": "user", "content": text})
+        errs = self.__dict__.setdefault("_why", {})
+        for name in ([only] if only else self.extra_keys()):
+            if not only and self._cool_until(name) > time.time():
+                continue  # out of free messages for now
+            errs.pop(name, None)
+            p = EXTRA_PROVIDERS[name]
+            key = (self.cfg.get(name + "_api_key") or os.environ.get(p["env"], "")).strip()
+            pref = self.cfg.get(name + "_model")
+            ids = self._provider_models(name)
+            tries = ([pref] if pref else []) + self._rank_models(ids, p["hard"] if is_hard_or_code else p["easy"])[:3]
+            if model and model != "auto":
+                tries = [model] + [m for m in tries if m != model]
+            if not tries:
+                errs[name] = "it didn't list any models (wrong key, or no internet)"
+            for model in tries:
+                try:
+                    r = requests.post(p["base"] + "/chat/completions", stream=True, timeout=(4, 9),
+                                      headers={"Authorization": "Bearer " + key},
+                                      json={"model": model, "messages": msgs, "max_tokens": 2048, "stream": True,
+                                            "temperature": 0.3 if is_hard_or_code else 0.5})
+                    if r.status_code == 200:
+                        ans = ""
+                        r.encoding = "utf-8"
+                        for line in r.iter_lines(chunk_size=1, decode_unicode=True):
+                            if not line or not line.startswith("data:"):
+                                continue  # keep-alive comments
+                            data = line[5:].strip()
+                            if data == "[DONE]":
+                                break
+                            try:
+                                ch = (json.loads(data).get("choices") or [{}])[0]
+                            except ValueError:
+                                continue
+                            piece = (ch.get("delta") or ch.get("message") or {}).get("content") or ""
+                            if piece:
+                                ans += piece
+                                shown = strip_thinking(ans)
+                                if on_token and shown.strip():
+                                    on_token(shown)
+                            if self.stop_flag.is_set():
+                                ans += " …(stopped)"
+                                break
+                        r.close()
+                        ans = strip_thinking(ans).strip()
+                        if ans:
+                            return ans, f"{p['label']}: {model}"
+                        errs[name] = "empty answer"
+                        continue
+                    r.close()
+                    if r.status_code == 429:
+                        self._cool(name, r, default=300)
+                        errs[name] = "its free limit is used up right now"
+                        break  # the limit is for the whole account: next provider
+                    elif r.status_code in (401, 403):
+                        errs[name] = "it rejected the key (wrong or not activated)"
+                        break  # wrong key: don't try this provider's other models
+                    else:
+                        errs[name] = f"error {r.status_code} from that model"
+                except Exception:
+                    errs[name] = "no answer (internet, or too slow)"
+                    break  # offline or timed out: go to the next provider
+        return None
+
+    def cloud_chat(self, text, history, on_token=None, system_instruction=None, is_hard_or_code=False, images=None):
+        """Online brains in order: Gemini, then the backup free providers. Returns (answer, model) or None."""
+        self._limited_now = []
+        res = self.gemini_chat(text, history, on_token=on_token, system_instruction=system_instruction,
+                               is_hard_or_code=is_hard_or_code, images=images)
+        if res:
+            return res
+        now = time.time()
+        kinds = self.__dict__.get("_limit_kind", {})
+        gemini_limited = any(u > now and kinds.get(k) == "limit"
+                             for k, u in self.__dict__.get("_cool_map", {}).items() if k.startswith("gemini"))
+        if gemini_limited:
+            self._tell("Gemini's free messages are used up for now" +
+                       (", switching to my backup brains." if self.extra_keys() else ". Add a backup brain in Settings → Keys to keep going online."))
+        res = self.extra_chat(text, history, on_token=on_token, system_instruction=system_instruction,
+                              is_hard_or_code=is_hard_or_code)
+        for n in self.extra_keys():
+            if self._cool_until(n) > now:
+                self._tell(f"{EXTRA_PROVIDERS[n]['label']}'s free messages are used up for now.")
+        if res:
+            if gemini_limited:
+                self._tell(f"{res[1]} is answering instead.")
+            return res
+        if gemini_limited or any(self._cool_until(n) > now for n in self.extra_keys()):
+            self._tell("Every free online brain is at its limit, so I'm using the laptop model. They reset by themselves (usually within a day).")
+        return None
+
+    def ask_brain(self, messages, model=None, temperature=0.3, hard=True, images=None):
+        """One whole answer for the helper boxes (Lab Log "Ask Vega", reviews): Gemini when online
+        (better answers), otherwise the laptop model. messages = [{"role": "system"/"user"/"assistant", "content"}]."""
+        system = "\n\n".join(m["content"] for m in messages if m.get("role") == "system")
+        rest = [m for m in messages if m.get("role") != "system"]
+        if rest and not self.cfg.get("private_mode", False):
+            try:
+                res = self.cloud_chat(rest[-1]["content"], rest[:-1], system_instruction=system or None,
+                                       is_hard_or_code=hard, images=images)
+            except Exception:
+                res = None
+            if res and res[0]:
+                return res[0]
+        if images and messages:
+            for m in reversed(messages):
+                if m.get("role") == "user":
+                    raw_b64 = []
+                    for img in images:
+                        d = img.get("data") if isinstance(img, dict) else str(img)
+                        if "," in d: d = d.split(",", 1)[1]
+                        if d.strip(): raw_b64.append(d.strip())
+                    if raw_b64: m["images"] = raw_b64
+                    break
+        import ollama
+        r = ollama.chat(model=model or self.smart_model(), keep_alive="15m",
+                        options={"temperature": temperature, "num_ctx": 4096}, messages=messages)
+        return (r["message"]["content"] if isinstance(r, dict) else r.message.content) or ""
+
+    def ollama_chat(self, text, history, on_token=None, system_instruction=None, model=None, images=None):
         """Call local Ollama model (Qwen 3B / Coder 3B). Streams and returns (answer, model_name)."""
         import ollama
         target_model = model or self.pick_model(text)
@@ -1449,7 +1934,23 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             if msg_text:
                 clean_text = re.sub(r"^\[\d{1,2}\s+[A-Za-z]{3}\s+\d{4}[^\]]*\]\s*", "", msg_text)
                 msgs.append({"role": role, "content": clean_text})
-        msgs.append({"role": "user", "content": text})
+
+        user_msg = {"role": "user", "content": text}
+        if images:
+            raw_b64_list = []
+            for img in images:
+                if isinstance(img, dict):
+                    d = img.get("data") or ""
+                    if "," in d:
+                        d = d.split(",", 1)[1]
+                    d = d.strip()
+                    if d:
+                        raw_b64_list.append(d)
+                elif isinstance(img, str):
+                    raw_b64_list.append(img)
+            if raw_b64_list:
+                user_msg["images"] = raw_b64_list
+        msgs.append(user_msg)
 
         answer = ""
         main_model = self.cfg.get("model") or "qwen2.5:3b"
@@ -1481,7 +1982,7 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
 
         return answer, active_model
 
-    def chat(self, text, source="laptop", on_token=None, shown=None, instruction=None, save=True):
+    def chat(self, text, source="laptop", on_token=None, shown=None, instruction=None, save=True, images=None, preferred_provider=None, preferred_model=None):
         with self.lock:
             stamp = datetime.now().strftime("%d %b %Y, %I:%M %p")
             keep = 6 if self.active_doc else 14
@@ -1490,8 +1991,25 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             # Check if user used emoji
             user_has_emoji = bool(re.search(r"[\U00010000-\U0010ffff]", text))
 
+            # Check if user asked to explain in her own words / full chat
+            is_explain_req = bool(re.search(
+                r"\b(explain(?:ing)?|in your (?:own )?words|full chat|walk me through|in detail|break (?:it )?down|everything)\b",
+                text, re.I
+            ))
+            if is_explain_req:
+                explain_instruction = (
+                    "The user specifically asked you to explain in your own words. "
+                    "Provide a comprehensive, conversational, easy-to-understand explanation of the topic or recent conversation in natural spoken words. "
+                    "Explain the full concept thoroughly so it can be spoken out loud. "
+                    "Do NOT say 'the rest is on screen' or tell them to look at the screen—explain it all in your words."
+                )
+                if instruction:
+                    instruction += "\n" + explain_instruction
+                else:
+                    instruction = explain_instruction
+
             # Determine query complexity
-            is_hard_or_code = self.question_kind(text) in ("code", "think")
+            is_hard_or_code = (self.question_kind(text) in ("code", "think")) or bool(images) or is_explain_req
             sys_prompt = self.personality()
             if instruction:
                 sys_prompt += f"\n\nSpecial instructions for this answer: {instruction}"
@@ -1500,20 +2018,60 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             model_used = ""
             source_label = "Online"
 
-            # 1. Try Google Gemini if online and not in private mode
-            if not self.cfg.get("private_mode", False):
-                gemini_res = self.gemini_chat(text, self.history[-keep:], on_token=on_token,
-                                              system_instruction=sys_prompt, is_hard_or_code=is_hard_or_code)
+            # Direct preferred provider routing if requested by user
+            pref_p = preferred_provider or getattr(self, "_preferred_provider", None)
+            pref_m = preferred_model or getattr(self, "_preferred_model", None)
+            if pref_p == "auto":
+                pref_p = None
+            if pref_m == "auto":
+                pref_m = None
+
+            if pref_p == "groq":
+                groq_res = self.extra_chat(text, self.history[-keep:], on_token=on_token,
+                                           system_instruction=sys_prompt, is_hard_or_code=is_hard_or_code,
+                                           only="groq", model=pref_m)
+                if groq_res is not None:
+                    answer, model_used = groq_res
+                    source_label = "Online"
+            elif pref_p == "gemini":
+                gem_res = self.gemini_chat(text, self.history[-keep:], on_token=on_token,
+                                          system_instruction=sys_prompt, is_hard_or_code=is_hard_or_code,
+                                          images=images, model=pref_m)
+                if gem_res is not None:
+                    answer, model_used = gem_res
+                    source_label = "Online"
+            elif pref_p in ("ollama", "local"):
+                local_m = pref_m if pref_m else self.pick_model(text)
+                ol_res = self.ollama_chat(text, self.history[-keep:], on_token=on_token,
+                                          system_instruction=sys_prompt, model=local_m,
+                                          images=images)
+                if ol_res is not None:
+                    answer, model_used = ol_res
+                    source_label = "Offline"
+            elif pref_p and pref_p in EXTRA_PROVIDERS:
+                ex_res = self.extra_chat(text, self.history[-keep:], on_token=on_token,
+                                         system_instruction=sys_prompt, is_hard_or_code=is_hard_or_code,
+                                         only=pref_p, model=pref_m)
+                if ex_res is not None:
+                    answer, model_used = ex_res
+                    source_label = "Online"
+
+            # 1. Try Google Gemini if online and not in private mode (when no answer yet)
+            if not answer and not self.cfg.get("private_mode", False):
+                gemini_res = self.cloud_chat(text, self.history[-keep:], on_token=on_token,
+                                             system_instruction=sys_prompt, is_hard_or_code=is_hard_or_code,
+                                             images=images)
                 if gemini_res is not None:
                     answer, model_used = gemini_res
                     source_label = "Online"
 
-            # 2. Automatic Fallback to Local Ollama model if Gemini failed, offline, or private mode
+            # 2. Automatic Fallback to Local Ollama model if every online brain failed, offline, or private mode
             if not answer:
                 source_label = "Offline"
                 local_model = self.pick_model(text)
                 answer, model_used = self.ollama_chat(text, self.history[-keep:], on_token=on_token,
-                                                      system_instruction=sys_prompt, model=local_model)
+                                                      system_instruction=sys_prompt, model=local_model,
+                                                      images=images)
 
             answer = strip_thinking(answer).strip() or "(no answer)"
             answer = self.no_fake_actions(answer)
@@ -1534,6 +2092,8 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             out = reply(answer, answer, kind="chat")
             out["model"] = model_used
             out["source_label"] = source_label
+            if is_explain_req:
+                out["full_speech"] = True
             return out
 
     FAKE_ACTION = re.compile(
@@ -1828,22 +2388,39 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             return []
         now = datetime.now()
         due = []
+        changed = False
         for r in items:
-            if r.get("done"):
+            if not isinstance(r, dict) or r.get("done"):
                 continue
             try:
                 when = datetime.fromisoformat(r["when"])
-            except (KeyError, ValueError):
+                if when.tzinfo is not None:
+                    when = when.astimezone().replace(tzinfo=None)
+            except (KeyError, TypeError, ValueError):
                 r["done"] = True
                 continue
             if when <= now:
                 r["done"] = True
+                changed = True
                 late = (now - when).total_seconds() > 120
-                due.append({"text": r["text"], "when": when, "late": late})
-        if due:
+                due.append({"text": r.get("text", "Reminder"), "when": when, "late": late})
+        if changed:
             keep_from = now - timedelta(days=7)
-            items = [r for r in items if not r.get("done") or datetime.fromisoformat(r["when"]) > keep_from]
-            write_json("reminders.json", items)
+            retained = []
+            for r in items:
+                if not isinstance(r, dict) or not r.get("done"):
+                    retained.append(r)
+                    continue
+                try:
+                    when = datetime.fromisoformat(r["when"])
+                    if when.tzinfo is not None:
+                        when = when.astimezone().replace(tzinfo=None)
+                except (KeyError, TypeError, ValueError):
+                    retained.append(r)
+                    continue
+                if when > keep_from:
+                    retained.append(r)
+            write_json("reminders.json", retained)
         return due
 
     # ---------------- my tasks (to-do list with dates and repeats; tasks.json)
@@ -2945,7 +3522,7 @@ class Vega(ControlMixin, LabLogMixin, TracksMixin, SummaryMixin):
             site = re.sub(r"^(?:the|my|our)\s+", "", site)
             if site in ("lab log", "lablog", "claude lab log"):
                 # Open the local Lab Log window instead of external URL
-                return self.lablog_command(t, raw) or reply("Opening your Lab Log.")
+                return reply("Opening your Lab Log.", "Opening your Lab Log.", open_lablog=True)
             else:
                 url = sites.get(site)
                 if not url:

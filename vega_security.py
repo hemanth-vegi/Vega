@@ -75,16 +75,18 @@ def check_pin(pin):
 
 
 def lock_minutes():
-    """Minutes without use before Vega locks herself. 0 = never."""
+    """Minutes without use before Vega locks herself. 0 = never; active timeouts are at least 15 minutes."""
     try:
-        return max(0, int(security().get("lock_minutes", 30)))
+        minutes = max(0, int(security().get("lock_minutes", 30)))
+        return max(15, minutes) if minutes else 0
     except (TypeError, ValueError):
         return 30
 
 
 def set_lock_minutes(n):
     s = security()
-    s["lock_minutes"] = int(n)
+    minutes = max(0, int(n))
+    s["lock_minutes"] = max(15, minutes) if minutes else 0
     save_security(s)
 
 
@@ -95,7 +97,13 @@ def voice_packages_missing():
 
 
 def voice_only():
-    return bool(security().get("voice_only")) and os.path.exists(here("voiceprint.npy"))
+    """True if 'Only obey my voice' is enabled in settings."""
+    return bool(security().get("voice_only"))
+
+
+def voice_only_ready():
+    """True if 'Only obey my voice' is enabled, voiceprint exists, and dependencies are installed."""
+    return voice_only() and has_voiceprint() and not voice_packages_missing()
 
 
 def set_voice_only(on):

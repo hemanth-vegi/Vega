@@ -1,0 +1,24 @@
+HOW TO FIX VEGA (3 steps, no coding)
+
+1. Close Antigravity. Do not ask it to change Vega any more.
+2. Put this whole "vega_fix" folder INSIDE C:\CloudLab\mybot
+   (so you have C:\CloudLab\mybot\vega_fix\INSTALL FIX.bat)
+3. Double-click  INSTALL FIX.bat  and wait until it says "All done!"
+
+It puts every file back in working order and keeps your diary, notes, Lab Log and settings.
+Your old files are saved first in a folder called backup_before_fix_... inside mybot.
+
+To open Vega later:
+  - double-click "Vega" on your desktop, or
+  - click the blue V by the clock (look under the ^ arrow), or
+  - press Ctrl + Alt + Space to type to her in a small box.
+When you close her window, a small box appears: "Vega is still running".
+
+VOICE UNLOCK
+  If the lock screen says voice unlock needs speechbrain/torch: double-click
+  INSTALL VOICE UNLOCK.bat (in the mybot folder). It shows the download
+  (300 MB to 1 GB, 5 to 15 minutes) and restarts Vega when it's done.
+  Then, if the lock screen says there is no voiceprint: unlock with your PIN,
+  open Settings -> PIN and lock -> "Set up my voice" and read the 4 sentences.
+
+If anything fails: double-click "Start Vega (show errors).bat" and send Claude a screenshot.

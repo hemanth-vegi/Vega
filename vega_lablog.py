@@ -81,7 +81,6 @@ class LabLogMixin:
 
     def assess_day(self, idx):
         """Ask the AI to review this day's lab log. Returns (text, score or None)."""
-        import ollama
         plan = self.load_plan()
         d = self.plan_day(plan, idx) if plan else None
         if not d:
@@ -105,9 +104,8 @@ class LabLogMixin:
             "Tip for tomorrow: <one practical tip>\n"
             "If his notes show a mistake or an error message, explain the fix in one line under Missing."
         )
-        r = ollama.chat(model=self.review_model(), keep_alive="15m", options={"temperature": 0.3, "num_ctx": 4096},
-                        messages=[{"role": "system", "content": self.personality()}, {"role": "user", "content": prompt}])
-        text = (r["message"]["content"] if isinstance(r, dict) else r.message.content) or ""
+        text = self.ask_brain([{"role": "system", "content": self.personality()}, {"role": "user", "content": prompt}],
+                              model=self.review_model(), temperature=0.3)
         from vega_core import strip_thinking
         text = strip_thinking(text).strip()
         m = re.search(r"score\s*:\s*(\d{1,2})\s*/\s*10", text, re.I)

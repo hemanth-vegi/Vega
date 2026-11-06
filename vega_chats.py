@@ -20,7 +20,7 @@ import re
 import secrets
 from datetime import datetime
 
-from vega_core import here, read_json, write_json
+from vega_core import here, read_json, write_json, write_json_file
 
 
 def _now():
@@ -45,8 +45,7 @@ class ChatStore:
         if not chat.get("messages") and not force and chat.get("title") == "New chat" and not chat.get("pinned"):
             return  # untouched empty chats aren't kept
         chat["updated"] = _now()
-        with open(self.path(chat["id"]), "w", encoding="utf-8") as f:
-            json.dump(chat, f, ensure_ascii=False, indent=0)
+        write_json_file(self.path(chat["id"]), chat)
 
     def load(self, cid):
         try:
@@ -107,7 +106,7 @@ class ChatStore:
         return t if len(t) <= 38 else t[:36].rsplit(" ", 1)[0] + "…"
 
     def add(self, chat, who, text):
-        chat["messages"].append({"who": who, "text": text[:8000], "t": _now()})
+        chat["messages"].append({"who": who, "text": text, "t": _now()})
         if chat["title"] == "New chat" and who in ("you", "phone"):
             chat["title"] = self.title_from(text)
         elif chat["title"] == "New chat" and who == "vega" and text.startswith("Good morning"):
@@ -145,8 +144,7 @@ class ChatStore:
         if c:
             c["pinned"] = bool(on)
             c["updated"] = c.get("updated") or _now()
-            with open(self.path(cid), "w", encoding="utf-8") as f:  # pinning doesn't move it to the top of "recent"
-                json.dump(c, f, ensure_ascii=False, indent=0)
+            write_json_file(self.path(cid), c)  # pinning doesn't move it to the top of "recent"
 
     # ---------------- project files (like Claude's project knowledge)
     def project_folder(self, pid):

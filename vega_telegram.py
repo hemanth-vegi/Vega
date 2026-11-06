@@ -43,11 +43,21 @@ class TelegramBridge(threading.Thread):
     # ------------- Telegram API
     def api(self, method, wait=40, **params):
         import requests
-        r = requests.post(f"https://api.telegram.org/bot{self.token}/{method}", json=params, timeout=wait)
-        data = r.json()
+        try:
+            r = requests.post(f"https://api.telegram.org/bot{self.token}/{method}", json=params, timeout=wait)
+            data = r.json()
+        except Exception as exc:
+            # Request exceptions often include the full URL, which contains the bot token.
+            raise RuntimeError(f"Telegram request failed ({type(exc).__name__})") from None
         if not data.get("ok"):
-            raise RuntimeError(data.get("description") or f"HTTP {r.status_code}")
+            raise RuntimeError(self._redact(data.get("description") or f"HTTP {r.status_code}"))
         return data["result"]
+
+    def _redact(self, message):
+        message = str(message)
+        if self.token:
+            message = message.replace(self.token, "[HIDDEN]")
+        return re.sub(r"(https?://api\.telegram\.org/bot)[^/\s]+", r"\1[HIDDEN]", message, flags=re.I)
 
     def send(self, text, chat_id=None, buttons=None):
         chat_id = chat_id or self.chat_id
@@ -66,6 +76,7 @@ class TelegramBridge(threading.Thread):
 
     def report(self, message):
         """Show a phone-link problem in the Vega window (once per minute at most)."""
+        message = self._redact(message)
         now = time.time()
         if message != getattr(self, "_last_msg", None) or now - getattr(self, "_last_time", 0) > 60:
             self._last_msg, self._last_time = message, now
@@ -97,10 +108,12 @@ class TelegramBridge(threading.Thread):
             me = self.api("getMe", wait=15)
             self.on_event("status", f"Phone link on: Telegram bot @{me.get('username')}")
         except Exception as e:
-            self.on_event("status", f"Telegram didn't accept the bot token ({e}). Check it in Menu → Connect phone.")
+            self.report(f"Telegram didn't accept the bot token ({e}). Check it in Menu → Connect phone.")
             return
         offset = None
         started = time.time()
+        retry_delay = 5
+        outage_reported = False
         while self.running:
             try:
                 params = {"timeout": 30, "allowed_updates": ["message", "callback_query"]}
@@ -111,18 +124,27 @@ class TelegramBridge(threading.Thread):
                 if not self.running:
                     return
                 if "Conflict" in str(e):
-                    self.report("Another copy of Vega is using the phone link. Close the other one.")
-                    time.sleep(30)
+                    message = "Another copy of Vega is using the phone link. Close the other one."
+                    wait = 30
                 elif any(k in str(e).lower() for k in ("nameresolutionerror", "getaddrinfo", "connectionerror", "timed out", "timeout")):
-                    self.report("Phone link waiting for internet connection, retrying...")
-                    time.sleep(8)
+                    message = "Phone link waiting for internet connection; retrying with backoff."
+                    wait = retry_delay
                 else:
-                    clean_err = re.sub(r"/bot[^/]+/", "/bot[HIDDEN]/", str(e))
-                    self.report(f"Phone link problem, retrying: {clean_err}")
-                    time.sleep(5)
+                    message = f"Phone link problem, retrying: {e}"
+                    wait = retry_delay
+                if not outage_reported:
+                    self.report(message)
+                    outage_reported = True
+                if "Conflict" not in str(e):
+                    retry_delay = min(retry_delay * 2, 60)
+                time.sleep(wait)
                 continue
             if not self.running:
                 return
+            if outage_reported:
+                self.report("Phone link reconnected.")
+                outage_reported = False
+            retry_delay = 5
             for u in updates:
                 offset = u["update_id"] + 1
 

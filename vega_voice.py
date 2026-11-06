@@ -30,6 +30,25 @@ SAMPLE_RATE = 16000
 BLOCK = 1600  # 0.1 second of audio
 
 
+def mic_input_channels(sd, limit=4):
+    """Use the available input channels so stereo/array mics aren't silently read on one dead side."""
+    try:
+        device = sd.default.device[0]
+        info = sd.query_devices(device, "input") if device is not None and int(device) >= 0 else sd.query_devices(kind="input")
+        return max(1, min(int(info.get("max_input_channels", 1) or 1), int(limit)))
+    except Exception:
+        return 1
+
+
+def mono_from_input(indata):
+    """Pick the strongest input channel for this block instead of assuming channel zero has the mic signal."""
+    data = np.asarray(indata, dtype=np.float32)
+    if data.ndim < 2 or data.shape[1] <= 1:
+        return data.reshape(-1).copy()
+    levels = np.sqrt(np.mean(data * data, axis=0))
+    return data[:, int(np.argmax(levels))].copy()
+
+
 def log_problem(message):
     """Write voice problems to voice_log.txt (in the mybot folder) so they can be checked later."""
     try:
@@ -79,14 +98,16 @@ def clean_for_speech(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def shorten_for_speech(text, max_sentences=3, max_chars=350):
-    """Long answers stay on screen; Vega only reads the start out loud."""
-    text = clean_for_speech(text)
-    parts = re.split(r"(?<=[.!?])\s+", text)
+def shorten_for_speech(text, max_sentences=4, max_chars=450, full_speech=False):
+    """If full_speech is True, speaks the entire explanation without truncating or saying 'The rest is on screen'."""
+    cleaned = clean_for_speech(text)
+    if full_speech:
+        return re.sub(r"\s*(?:the )?rest is on (?:the )?screen\.?", "", cleaned, flags=re.I).strip()
+    parts = re.split(r"(?<=[.!?])\s+", cleaned)
     out = " ".join(parts[:max_sentences])
     if len(out) > max_chars:
         out = out[:max_chars].rsplit(" ", 1)[0] + "."
-    if len(parts) > max_sentences or len(text) > len(out) + 5:
+    if len(parts) > max_sentences or len(cleaned) > len(out) + 5:
         out += " The rest is on screen."
     return out
 
@@ -232,35 +253,62 @@ class Mouth:
         import wave
         import edge_tts
         import av
-        folder = tempfile.gettempdir()
-        mp3, wav = os.path.join(folder, "vega_say.mp3"), os.path.join(folder, "vega_say.wav")
-        # never wait forever for the internet voice (that would block her voice and "Hey Vega")
-        asyncio.run(asyncio.wait_for(edge_tts.Communicate(text, voice).save(mp3), timeout=20))
-        pcm = bytearray()
-        with av.open(mp3) as container:  # mp3 -> wav that Windows can play without extra programs
-            resampler = av.AudioResampler(format="s16", layout="mono", rate=24000)
-            for frame in container.decode(audio=0):
-                for f in resampler.resample(frame):
+        mp3_fd, mp3 = tempfile.mkstemp(prefix="vega_say_", suffix=".mp3")
+        wav_fd, wav = tempfile.mkstemp(prefix="vega_say_", suffix=".wav")
+        os.close(mp3_fd)
+        os.close(wav_fd)
+        try:
+            # never wait forever for the internet voice (that would block her voice and "Hey Vega")
+            asyncio.run(asyncio.wait_for(edge_tts.Communicate(text, voice).save(mp3), timeout=20))
+            pcm = bytearray()
+            with av.open(mp3) as container:  # mp3 -> wav that Windows can play without extra programs
+                resampler = av.AudioResampler(format="s16", layout="mono", rate=24000)
+                for frame in container.decode(audio=0):
+                    for f in resampler.resample(frame):
+                        pcm += f.to_ndarray().tobytes()
+                for f in resampler.resample(None):
                     pcm += f.to_ndarray().tobytes()
-            for f in resampler.resample(None):
-                pcm += f.to_ndarray().tobytes()
-        if not pcm:
-            raise RuntimeError("the voice service sent no sound")
-        with wave.open(wav, "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(24000)
-            w.writeframes(bytes(pcm))
-        return wav, len(pcm) / 2 / 24000
+            if not pcm:
+                raise RuntimeError("the voice service sent no sound")
+            with wave.open(wav, "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(24000)
+                w.writeframes(bytes(pcm))
+            return wav, len(pcm) / 2 / 24000
+        except Exception:
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
+            raise
+        finally:
+            try:
+                os.remove(mp3)
+            except OSError:
+                pass
 
     def _play(self, wav, seconds):
-        if self._stop.is_set():
-            return
-        import winsound
-        winsound.PlaySound(wav, winsound.SND_FILENAME | winsound.SND_ASYNC)
-        end = time.time() + seconds + 0.2
-        while time.time() < end and not self._stop.is_set():
-            time.sleep(0.1)
+        started = False
+        try:
+            import winsound
+            if self._stop.is_set():
+                return
+            winsound.PlaySound(wav, winsound.SND_FILENAME | winsound.SND_ASYNC)
+            started = True
+            end = time.time() + seconds + 0.2
+            while time.time() < end and not self._stop.is_set():
+                time.sleep(0.1)
+        finally:
+            if started and self._stop.is_set():
+                try:
+                    winsound.PlaySound(None, 0)
+                except Exception:
+                    pass
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
 
     def _speak_telugu(self, text):
         """Speak in Telugu. If translation fails, read the English with the Indian English neural voice."""
@@ -377,18 +425,19 @@ class Ears:
         self._lock = threading.Lock()
         self.hint = "Hey Vega."  # names and words to expect; the app fills this in
         self.hotwords = ""  # names Whisper should prefer (contacts, apps, your words)
-        # Telugu mode: a multilingual model hears Telugu, English or a mix, and writes it down in English
+        # Auto/Telugu modes use a cached multilingual model and preserve recognized Telugu/English wording.
         self.telugu = False
+        self.language_mode = "auto"
         self.telugu_model_name = "small"
         self.last_lang = "en"  # the language of the last thing he said
-        # Google speech (Indian English) for commands, when online. Much better with Indian accents.
+        # Kept only for settings compatibility. Recognition never sends microphone audio online.
         # Only what you say AFTER "Hey Vega" or the Mic button is sent; "Hey Vega" itself stays on the laptop.
         self.cloud = False
         self._cloud_fails, self._cloud_off_until = 0, 0.0
 
     def model(self, name):
         m = self._models.get(name)
-        if m is not None:  # already loaded: don't wait behind another model that is downloading
+        if m is not None:  # already loaded: don't wait behind another model load
             return m
         with self._lock:
             if name not in self._models:
@@ -396,11 +445,31 @@ class Ears:
                 # limit the CPU it may use, so the laptop stays smooth (the "Hey Vega" model gets only 2 cores)
                 cores = os.cpu_count() or 4
                 threads = 2 if (name == self.wake_model_name and name != self.main_model_name()) else max(2, min(4, cores // 3))
-                self._models[name] = WhisperModel(name, device="cpu", compute_type="int8", cpu_threads=threads)
+                try:
+                    self._models[name] = WhisperModel(name, device="cpu", compute_type="int8",
+                                                      cpu_threads=threads, local_files_only=True)
+                except Exception:
+                    # A model name must resolve from the local Hugging Face cache. Never download one from the microphone path.
+                    raise RuntimeError(f"Local speech model '{name}' is not cached or could not be loaded. No download was attempted.") from None
             return self._models[name]
 
+    def set_language_mode(self, mode):
+        """Select a local transcription language mode without changing the mic workflow."""
+        if mode not in ("auto", "english", "telugu"):
+            raise ValueError("Choose auto, English, or Telugu speech recognition.")
+        self.language_mode = mode
+        self.telugu = mode in ("auto", "telugu")
+        return self.main_model_name()
+
+    def set_multilingual_model(self, name):
+        """Select a cached CPU model for Telugu and code-switched speech."""
+        if name not in ("small", "medium"):
+            raise ValueError("Choose the cached small or medium multilingual Whisper model.")
+        self.telugu_model_name = name
+        return self.main_model_name()
+
     def main_model_name(self):
-        return self.telugu_model_name if self.telugu else self.model_name
+        return self.telugu_model_name if self.language_mode in ("auto", "telugu") else self.model_name
 
     def _words(self, source, fast=False, prompt=None):
         if fast:  # wake word: always the small English model
@@ -424,12 +493,11 @@ class Ears:
                     continue
                 kept.append(s.text.strip())
             return " ".join(kept).strip()
-        elif self.telugu:  # Telugu / Tenglish / English speech -> English text
-            segments, info = self._run_model(self.telugu_model_name, source, task="translate", prompt=prompt)
-            # which language he spoke, so Vega can answer in the same one
+        elif self.language_mode in ("auto", "telugu"):  # preserve code-switching and technical terms in the recognized text
+            segments, info = self._run_model(self.telugu_model_name, source, task="transcribe", prompt=prompt)
+            # Whisper detects language locally; transcribe keeps Telugu and English words instead of translating them.
             lang, prob = getattr(info, "language", "en"), float(getattr(info, "language_probability", 1.0) or 0)
-            # only treat it as Telugu when Whisper is fairly sure it wasn't English (Indian English can look like Hindi)
-            self.last_lang = "te" if lang in ("te", "hi", "kn", "ta", "ml") and prob >= 0.6 else "en"
+            self.last_lang = "te" if lang == "te" and prob >= 0.6 else "en"
         else:
             segments, _ = self._run_model(self.model_name, source, language="en", prompt=prompt)
             self.last_lang = "en"
@@ -466,58 +534,20 @@ class Ears:
         return model.transcribe(source, task=task, **({"language": language} if language else {}))
 
     def cloud_ready(self):
-        if not self.cloud or self.telugu or time.time() < self._cloud_off_until:
-            return False
-        import importlib.util
-        return importlib.util.find_spec("speech_recognition") is not None
+        # Speech recognition remains offline even if an old config file says cloud_speech=true.
+        return False
 
     def google(self, audio, timeout=7):
-        """Google's free speech engine, set to Indian English. Returns the text, "" if it heard no words,
-        or None if it can't be used right now (offline, blocked...) -> then the laptop model is used."""
-        if not self.cloud or self.telugu or not isinstance(audio, np.ndarray) or time.time() < self._cloud_off_until:
-            return None
-        try:
-            import speech_recognition as sr
-        except ImportError:
-            return None
-        clean_audio = normalize_audio(audio)
-        pcm = (np.clip(clean_audio, -1.0, 1.0) * 32767).astype(np.int16).tobytes()
-        r = sr.Recognizer()
-        r.operation_timeout = timeout
-        t0 = time.time()
-        try:
-            text = (r.recognize_google(sr.AudioData(pcm, SAMPLE_RATE, 2), language="en-IN") or "").strip()
-            self._cloud_fails = 0
-            self.last_lang = "en"
-            log_problem(f"google ({time.time() - t0:.1f}s): \"{text[:100]}\"")
-            return text
-        except sr.UnknownValueError:
-            self._cloud_fails = 0
-            log_problem(f"google ({time.time() - t0:.1f}s): heard no words")
-            return ""
-        except Exception as e:
-            self._cloud_fails += 1
-            if self._cloud_fails >= 3:  # keep failing (no internet?): don't make him wait, try again in 10 minutes
-                self._cloud_off_until = time.time() + 600
-                self._cloud_fails = 0
-            log_problem(f"google not available ({type(e).__name__}: {str(e)[:60]}), using the laptop model")
-            return None
+        """Compatibility stub: audio is never sent to an online speech service."""
+        return None
 
     def transcribe_command(self, audio, prompt=None, timeout=25):
-        """Turn a spoken command into text, safely: never hang, never wait for a download.
+        """Turn a spoken command into text with the cached local model; never download one.
         If the main speech model isn't ready yet, use the "Hey Vega" model (English) for now."""
         if audio is None or (isinstance(audio, np.ndarray) and len(audio) < SAMPLE_RATE * 0.2):
             return ""
-        g = self.google(audio)
-        if g:  # Google heard actual words, return immediately
-            return g
-        if g == "":
-            # Google Indian English cloud STT successfully listened and found NO human words (silence or ambient noise).
-            # Do NOT fall back to Whisper on silence/noise - that causes Whisper to hallucinate phantom sentences!
-            log_problem("command: google heard no words (silence/ambient noise)")
-            return ""
         name = self.main_model_name()
-        if name not in self._models:
+        if name not in self._models and self.language_mode == "english":
             log_problem(f"command: main model '{name}' not ready yet, using '{self.wake_model_name}' for now")
             use_fast = True
         else:
@@ -554,18 +584,6 @@ class Ears:
 
     def transcribe(self, audio, fast=False, prompt=None):
         clean_audio = normalize_audio(audio) if isinstance(audio, np.ndarray) else audio
-        if not fast:  # the Mic button: try Google first
-            g = self.google(clean_audio)
-            if g:
-                log_voice_debug(f"Transcription (Google): '{g}'")
-                return g
-            if g == "":  # Google often misses one short word like "yes": the laptop model gets a try too
-                log_problem("mic: google heard no words, trying the laptop model")
-                text = drop_filler(self._words(clean_audio, fast, prompt))
-                log_problem(f"mic: laptop model heard “{text[:80]}”")
-                if text:
-                    log_voice_debug(f"Transcription (Whisper fallback): '{text}'")
-                return text
         res = self._words(clean_audio, fast, prompt)
         if res:
             log_voice_debug(f"Transcription ({'Whisper-fast' if fast else 'Whisper'}): '{res}'")
@@ -580,11 +598,11 @@ class Ears:
         blocks = queue.Queue()
 
         def cb(indata, frames, t, status):
-            blocks.put(indata[:, 0].copy())
+            blocks.put(mono_from_input(indata))
 
         audio, started, quiet, noise = [], False, 0.0, None
         begin = time.time()
-        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=BLOCK, callback=cb):
+        with sd.InputStream(samplerate=SAMPLE_RATE, channels=mic_input_channels(sd), dtype="float32", blocksize=BLOCK, callback=cb):
             while True:
                 if stop_event is not None and stop_event.is_set():
                     break
@@ -667,7 +685,9 @@ NOT_WAKE = {"we", "the", "they", "hey", "very", "wait", "way", "what", "where", 
             "bigger", "begin", "began", "maybe", "okay", "yeah", "yes", "hello", "hi", "ok", "vegetable", "vegetables",
             "veg", "big", "bag", "beg", "wake", "weekend", "week", "vehicle", "video", "via", "view", "welcome", "well",
             "good", "go", "get", "give", "guys", "bro", "bye", "you", "i", "it", "is", "to", "me", "and", "a", "an",
-            "so", "no", "now", "not", "but", "be", "by", "we'll", "he", "she", "her", "his", "was", "were", "will"}
+            "so", "no", "now", "not", "but", "be", "by", "we'll", "he", "she", "her", "his", "was", "were", "will",
+            # names / words that woke her by mistake in the voice log
+            "vivek", "vikas", "google", "yoga", "weaker", "vigour", "vigor", "figure", "beta", "better"}
 
 
 BLOCKED = set()  # words that woke her by mistake ("That wasn't for you")
@@ -793,6 +813,20 @@ class WakeListener(threading.Thread):
         self.prev_wake = ("", 0.0)
         self.enabled = threading.Event()
         self.paused = threading.Event()
+        self._stream_lock = threading.Lock()
+        self._stream_open = False
+        self._stream_closed = threading.Event()
+        self._stream_closed.set()
+
+    def pause_for_capture(self, timeout=2.0):
+        """Pause the always-on stream and wait until PortAudio releases the mic for a one-shot capture."""
+        self.paused.set()
+        with self._stream_lock:
+            active = self._stream_open
+        return not active or self._stream_closed.wait(timeout)
+
+    def resume_after_capture(self):
+        self.paused.clear()
 
     def status(self, text):
         if self.on_status:
@@ -844,7 +878,8 @@ class WakeListener(threading.Thread):
                 log_problem(f"wake voice check failed ({e}), using the listen only")
         first_wake = find_wake(heard, loose=(self.strictness in ("easy", "very_easy"))) is not None
         if not got:
-            ok = second_ok
+            # Don't discard a clear primary wake-word hit just because the independent check was silent.
+            ok = first_wake or second_ok
             reason = f"first_wake={first_wake}, second_ok={second_ok}, no voice check"
             log_voice_debug(f"Wake decision: {'WOKE' if ok else 'IGNORED'} - text='{heard}', second='{(again or '')[:30]}' - {reason}")
             log_problem(f"wake: second listen heard \"{(again or '')[:40]}\" -> {'OK' if ok else 'not Vega'} "
@@ -887,16 +922,20 @@ class WakeListener(threading.Thread):
         # Always run a quick cheap pre-filter first (fast=True uses the small wake-word model).
         # This avoids sending every background sound to the full command model or to Google.
         quick = _norm(self.ears.transcribe(audio[:int(SAMPLE_RATE * 5)], fast=True, prompt=None))
+        wake_chimed = find_wake(quick, loose=True) is not None
+        if wake_chimed:
+            beep("wake")
         if len(quick.split()) < 2 or quick in self.JUNK:
             # Background noise, music, or ambient chatter: definitely not a command
             return
+        g = None
         if self.ears.cloud_ready():
-            # Online: check with Google STT (Indian English). If Google says nothing, stop here.
+            # Compatibility branch only: cloud_ready() stays false for offline recognition.
             g = self.ears.google(audio)
             if g == "":  # Google heard NO human words - don't bother Whisper
                 log_problem("direct: google heard no words (ambient noise), ignoring")
                 return
-        text = self.ears.transcribe_command(audio)
+        text = g if g else self.ears.transcribe_command(audio)
         t = _norm(text)
         if not t or t in self.JUNK:
             return
@@ -909,14 +948,16 @@ class WakeListener(threading.Thread):
         if cmd is not None:  # text contained a wake greeting
             text = cmd
             if not cmd or _norm(cmd) in self.JUNK:  # user just said "Hey Vega" or "Rekha" to greet Vega
-                beep("wake")
+                if not wake_chimed:
+                    beep("wake")
                 self.on_wake(audio)
                 return
         else:
             # Check if text is just a wake name or greeting variant without command
             words = re.findall(r"[a-z']+", text.lower())
             if len(words) <= 2 and all(w in (WAKE_WORDS | GREETINGS | FILLERS | LEARNED) for w in words):
-                beep("wake")
+                if not wake_chimed:
+                    beep("wake")
                 self.on_wake(audio)
                 return
         if self.voice_score:
@@ -964,17 +1005,26 @@ class WakeListener(threading.Thread):
             blocks = queue.Queue()
 
             def cb(indata, frames, t, status):
-                blocks.put(indata[:, 0].copy())
+                blocks.put(mono_from_input(indata))
 
+            with self._stream_lock:
+                if not self.enabled.is_set() or self.paused.is_set():
+                    continue
+                self._stream_open = True
+                self._stream_closed.clear()
+
+            stream_failed = False
             try:
                 try:
                     dev_idx = sd.default.device[0]
                     dev_info = sd.query_devices(dev_idx)
-                    log_voice_debug(f"Microphone opened: device [{dev_idx}] '{dev_info['name']}', max_input_channels={dev_info.get('max_input_channels', 1)}, samplerate={SAMPLE_RATE}")
+                    channels = mic_input_channels(sd)
+                    log_voice_debug(f"Microphone opened: device [{dev_idx}] '{dev_info['name']}', channels={channels} (strongest channel), samplerate={SAMPLE_RATE}")
                 except Exception as ex:
+                    channels = mic_input_channels(sd)
                     log_voice_debug(f"Microphone device query: {ex}")
                 log_voice_debug("listener started")
-                with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=BLOCK, callback=cb):
+                with sd.InputStream(samplerate=SAMPLE_RATE, channels=channels, dtype="float32", blocksize=BLOCK, callback=cb):
                     self._loop(blocks)
             except Exception as e:
                 import traceback
@@ -982,6 +1032,12 @@ class WakeListener(threading.Thread):
                 log_voice_debug(f"Listener error: {e}")
                 if self.on_error:
                     self.on_error(f"Listening problem: {e}")
+                stream_failed = True
+            finally:
+                with self._stream_lock:
+                    self._stream_open = False
+                    self._stream_closed.set()
+            if stream_failed:
                 time.sleep(3)
 
     def _loop(self, blocks):
@@ -1049,7 +1105,7 @@ class WakeListener(threading.Thread):
             self._last_check = time.time()
             # only the first 2.5 seconds can hold "Hey Vega", so check just that part: much faster
             heard = self.ears.transcribe(audio[:int(SAMPLE_RATE * 2.5)], fast=True)
-            loose = self.strictness == "very_easy"
+            loose = self.strictness in ("easy", "very_easy")
             rest = find_wake(heard, loose=loose) if heard else None
             if heard:
                 log_problem(f"heard: “{heard[:80]}” -> {'WAKE' if rest is not None else 'ignored'} ({self.strictness})")
@@ -1059,6 +1115,8 @@ class WakeListener(threading.Thread):
             if prompt_echo(heard):
                 log_problem(f"wake: ignored “{heard[:60]}” (only the hint repeated back = no real words)")
                 continue
+            # Give immediate feedback on the first wake-word hit, before any slower full-command pass.
+            beep("wake")
             if len(rest.split()) >= 2:
                 # "Hey Vega, what's the weather": hear it again with the better model, with NO wake-word hint
                 self.status("Understanding…")
@@ -1079,6 +1137,5 @@ class WakeListener(threading.Thread):
                     continue
                 self.prev_wake, self.last_wake = self.last_wake, (heard, time.time())
                 wake_audio = audio
-                beep("wake")
                 self.on_wake(audio)
                 waiting_for_command_until = time.time() + 8

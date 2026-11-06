@@ -500,7 +500,6 @@ class TracksMixin:
         """Review a Python / C / own-skill lesson. Returns (text, score or None)."""
         if tid == "linux":
             return self.assess_day(idx)
-        import ollama
         from vega_lablog import clean_step
         d = self.track_day(tid, idx)
         if not d:
@@ -523,9 +522,8 @@ class TracksMixin:
             "Tip for next time: <one practical tip>\n"
             "If his notes show a mistake or an error message, explain the fix in one line under Missing."
         )
-        r = ollama.chat(model=self.review_model(), keep_alive="15m", options={"temperature": 0.3, "num_ctx": 4096},
-                        messages=[{"role": "system", "content": self.personality()}, {"role": "user", "content": prompt}])
-        text = (r["message"]["content"] if isinstance(r, dict) else r.message.content) or ""
+        text = self.ask_brain([{"role": "system", "content": self.personality()}, {"role": "user", "content": prompt}],
+                              model=self.review_model(), temperature=0.3)
         from vega_core import strip_thinking
         text = strip_thinking(text).strip()
         m = re.search(r"score\s*:\s*(\d{1,2})\s*/\s*10", text, re.I)
@@ -537,15 +535,12 @@ class TracksMixin:
 
     def draft_lessons(self, name, count, minutes):
         """Ask the AI for a simple lesson list for a new skill (he checks and edits it before saving)."""
-        import ollama
         prompt = (f"Make a simple beginner study plan for: {name}.\n"
                   f"Exactly {count} lessons, each about {minutes} minutes, from zero to basic projects.\n"
                   "Write ONE lesson per line in this exact format, nothing else:\n"
                   "Title: small step; small step; small step\n"
                   "Keep steps short and practical. No numbering, no headings, no extra text.")
-        r = ollama.chat(model=self.smart_model(), keep_alive="15m", options={"temperature": 0.4, "num_ctx": 4096},
-                        messages=[{"role": "user", "content": prompt}])
-        text = (r["message"]["content"] if isinstance(r, dict) else r.message.content) or ""
+        text = self.ask_brain([{"role": "user", "content": prompt}], temperature=0.4)
         from vega_core import strip_thinking
         lines = [l for l in strip_thinking(text).splitlines() if ":" in l and len(l) > 6]
         return "\n".join(re.sub(r"\*\*|`|^#+\s*", "", l).strip() for l in lines[:count])

@@ -1,4 +1,123 @@
+# ===================================================
+# VEGA SECRETS, CREDENTIALS & TOKENS (NEVER COMMIT)
+# ===================================================
 .env
+.env.*
+!.env.example
+*.token
+*.key
+token.json
+credentials.json
 
+# Telegram session data & tokens
+telegram_token.txt
+telegram_paired_users.json
+
+# ===================================================
+# LOCAL STORAGE, DATABASES & CHAT ARCHIVES
+# ===================================================
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+vega.db*
+debug_vega.log*
+vega_error.log*
+*.log*
+tmp_*
+
+# Flat JSON local stores (legacy & caches)
+chats/
+reminders.json
+config.json
+memory.json
+contacts.json
+contacts.csv
+lablog_notes.json
+lablog.json
+apps_index.json
+briefing_state.json
+progress.json
+security.json
+telugu_cache.json
+agent_audit.json
+personal.json
+learn.json
+my_words.json
+plan.json
+plan_settings.json
+projects.json
+skills.json
+tasks.json
+lab_projects.json
+*.bak
+python_path.txt
+vega_report.txt
+facts.txt
+
+# ===================================================
+# USER BIOMETRICS, AUDIO & PRIVATE DOCUMENTS
+# ===================================================
+voiceprint.npy
+voiceprint_samples.npy
+voice_enrollment/
+voice_model/
+voice_log.txt
+*.wav
+*.mp3
+*.ogg
+*.flac
+documents/
+diary/
+
+# Fine-tuning & Distillation Datasets
+*.jsonl
+vega_training.jsonl
+*.gguf
+lora_weights/
+output/
+
+# ===================================================
+# PYTHON ENVIRONMENT & CACHES
+# ===================================================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# ===================================================
+# OS & SYSTEM METADATA & BROWSER PROFILES
+# ===================================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
 app_profile/
-
+app_profile2/
+test_profile/
+.stakpak/
+*.zip
+*.backup*
+*.patch
+*.snip*
+check_*.py
+html_snip.txt
+s1_snippet.txt
+changes_for_gemini.patch
+gemini_changes/
+Vega-update-*/
+backup_before_upgrades/
+logs/
