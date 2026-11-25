@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  vega:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vega_backend
+    restart: unless-stopped
+    ports:
+      - "47632:47632"
+    environment:
+      - PORT=47632
+      - HEADLESS=1
+      - HOST=0.0.0.0
+      - OLLAMA_BASE=http://host.docker.internal:11434
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - vega_data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  vega_data:
+    name: vega_backend_data

@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vega</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="highlight.css">
+  <link rel="stylesheet" href="style.css?v=2.7.0">
+  <link rel="stylesheet" href="hud.css?v=2.7.1">
+  <script src="marked.min.js"></script>
+  <script src="highlight.min.js"></script>
+</head>
+<body class="dark-theme">
+  <div id="app-container">
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-avatar">V</div>
+          <div class="brand-info">
+            <span class="brand-name">Vega</span>
+            <span class="brand-version">v2.0</span>
+          </div>
+        </div>
+        <button id="new-chat-btn" title="New Chat (Ctrl+N)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New chat</span>
+        </button>
+      </div>
+
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="chat-search" name="vega-chat-filter" value="" placeholder="Search chats..." autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search chats">
+      </div>
+
+      <button id="rail-apps-btn" class="rail-btn" title="Daily Hub & Apps">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </button>
+
+      <!-- PROJECTS SECTION -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-title">PROJECTS</span>
+          <button id="add-project-btn" class="icon-mini-btn" title="Create New Project">+</button>
+        </div>
+        <div id="projects-list-container">
+          <!-- Injected via app.js -->
+        </div>
+      </div>
+
+      <!-- CHATS SECTION -->
+      <div class="sidebar-section chats-section-wrapper">
+        <div class="section-title">CHATS</div>
+        <div class="chat-list" id="chat-history-container">
+          <!-- Injected via app.js grouped by Today, Yesterday, Older -->
+        </div>
+      </div>
+
+      <!-- SIDEBAR FOOTER -->
+      <div class="sidebar-footer">
+        <button id="open-apps-hub-btn" class="footer-btn" title="Daily Hub & Apps">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Daily Hub</span>
+        </button>
+        <button id="settings-btn" class="footer-btn" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Settings</span>
+        </button>
+        <button id="theme-toggle" class="footer-btn" title="Toggle Dark/Light Theme">
+          <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- CENTER CHAT AREA -->
+    <main id="chat-main">
+      <!-- TOP BAR -->
+      <header id="chat-header">
+        <div class="header-left">
+          <button id="toggle-sidebar-btn" class="icon-btn" title="Toggle Sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div id="current-chat-title" class="chat-title" title="Click to rename">New Conversation</div>
+        </div>
+
+        <!-- Center: Sleek Segmented Mode Switch Pill -->
+        <div class="header-center">
+          <div class="mode-switch-group" role="tablist" aria-label="Conversation Mode">
+            <button type="button" id="mode-chat-tab" class="mode-switch-btn active" role="tab" aria-selected="true" title="Chat Mode: Real-time SSE token stream">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Chat</span>
+            </button>
+            <button type="button" id="mode-career-tab" class="mode-switch-btn" role="tab" aria-selected="false" title="Career Workbench: Scam Shield, ATS Resumes & Tracker">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <span>Career</span>
+            </button>
+            <button type="button" id="mode-practice-tab" class="mode-switch-btn" role="tab" aria-selected="false" title="Disposable Linux practice simulator">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6m-5 0v6l-5.3 8.6A2.3 2.3 0 0 0 6.7 21h10.6a2.3 2.3 0 0 0 2-3.4L14 9V3m-5.8 11h11.6M10 7h4"/></svg>
+              <span>Lab</span>
+            </button>
+          </div>
+
+          <!-- Hybrid Brain Model Selector Dropdown -->
+          <div class="hybrid-brain-select-wrap" title="Select Hybrid AI Engine">
+            <select id="hybrid-model-select" name="hybrid-model-select" class="hybrid-model-dropdown" aria-label="Hybrid AI model selector">
+              <option value="auto" selected>Auto (Smart Route)</option>
+              <option value="groq">Groq (Cloud)</option>
+              <option value="gemini">Gemini (Cloud)</option>
+              <option value="nvidia">NVIDIA NIM (Cloud)</option>
+              <option value="openrouter">OpenRouter (Cloud)</option>
+              <option value="ollama">Laptop (Qwen Local)</option>
+            </select>
+          </div>
+
+          <!-- Network Mode Selector Dropdown -->
+          <div class="network-mode-select-wrap" title="Network Connection Mode: Auto, Low-Data, or Offline">
+            <select id="network-mode-select" name="network-mode-select" class="network-mode-dropdown" aria-label="Network mode selector">
+              <option value="auto">Net: Auto</option>
+              <option value="low_data">Net: Low-Data</option>
+              <option value="offline_only">Net: Offline</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Compact Status Indicator Dot -->
+          <div id="status-badge" class="status-compact-pill ready" title="Window active: just talk or type">
+            <span class="badge-dot"></span>
+            <span id="status-badge-text">Ready</span>
+          </div>
+
+          <!-- Quick Settings Trigger Button -->
+          <button id="quick-settings-btn" class="quick-settings-trigger" title="Quick Settings & Controls">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+
+          <!-- Quick Settings Popover Menu -->
+          <div id="quick-settings-popover" class="quick-settings-popover hidden">
+            <div class="popover-section-title">NETWORK & OFFLINE MODE</div>
+            <div class="popover-row" style="align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 11px; color: var(--text-muted, #94a3b8); font-weight: 500;">Mode:</span>
+              <select id="popover-network-mode" name="popover-network-mode" class="network-mode-dropdown" style="flex: 1; margin-left: 8px;" aria-label="Popover network mode selector">
+                <option value="auto">Auto (Detect Network)</option>
+                <option value="low_data">Low-Data (Metered)</option>
+                <option value="offline_only">Offline Only (Local Qwen)</option>
+              </select>
+            </div>
+
+            <div class="popover-divider"></div>
+            <div class="popover-section-title">SYSTEM & STATUS</div>
+            <!-- Real-Time Workstation Hardware Telemetry Pill -->
+            <div id="telemetry-pill" class="telemetry-pill-row" title="Workstation Hardware & VRAM">
+              <span class="telemetry-label">HARDWARE:</span>
+              <span id="telemetry-pill-text">CPU --% · RAM --G</span>
+            </div>
+
+            <div class="popover-divider"></div>
+            <div class="popover-section-title">VOICE & AUDIO</div>
+            <div class="popover-row">
+              <button id="listening-toggle-btn" class="badge-toggle-btn listening-toggle-btn on" data-action="toggle-listening" title="Controls microphone listening">
+                <span class="mic-dot"></span>
+                <span id="listening-text" class="listening-text">Listening: ON</span>
+              </button>
+              <button id="speaking-toggle-btn" class="badge-toggle-btn speaking-toggle-btn on" data-action="toggle-speaking" title="Controls Vega speaking replies">
+                <span class="speak-dot"></span>
+                <span id="speaking-text" class="speaking-text">Speak: ON</span>
+              </button>
+            </div>
+
+            <div class="popover-divider"></div>
+            <div class="popover-section-title">QUICK ACTIONS</div>
+            <div class="popover-row">
+              <button id="pin-chat-btn" class="popover-action-btn" title="Pin / Unpin this chat">☆ Pin Chat</button>
+              <button id="top-quickbar-btn" class="popover-action-btn" title="Lock Vega now">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg> Lock
+              </button>
+            </div>
+
+            <div class="popover-divider"></div>
+            <div class="popover-row" style="justify-content: space-between; align-items: center;">
+              <div id="model-badge" class="badge online" title="Tested connection status">
+                <span class="badge-dot"></span>
+                <span id="model-badge-text">Online (Gemini)</span>
+              </div>
+              <button id="toggle-right-panel-btn" class="mini-icon-btn" title="Daily Hub & News Drawer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- AI MEETING NOTE BANNER -->
+      <div id="meeting-note-banner" class="meeting-note-banner" role="region" aria-label="AI Meeting Note Recorder">
+        <div class="meeting-note-info">
+          <span class="meeting-note-dot" id="meeting-note-dot"></span>
+          <span id="meeting-note-status" class="meeting-note-status">AI Meeting Notes ready · click to capture audio notes</span>
+        </div>
+        <button type="button" id="meeting-note-btn" class="meeting-note-btn" title="Start or stop AI Meeting Note recording">
+          Start AI Meeting Note
+        </button>
+        <button type="button" id="meeting-study-btn" class="mini-btn" style="margin-left:8px; display:inline-flex; align-items:center; gap:6px;" title="Extract study flashcards & schedule deadlines">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+          Study Flashcards
+        </button>
+      </div>
+
+      <!-- COMPACT VOICE & HUD CONTROL BAR (Unified into Chat Workspace) -->
+      <div id="compact-hud-bar" class="compact-hud-bar" role="region" aria-label="Vega Voice and Telemetry Control Bar">
+        <div class="compact-hud-left">
+          <div id="hud-compact-status" class="compact-hud-pill idle" title="Live Voice State (Click to toggle Silent Mode)">
+            <span class="hud-status-dot"></span>
+            <span id="hud-compact-status-text">Idle</span>
+          </div>
+          <span id="hud-compact-engine" class="compact-engine-badge" title="Active Neural Voice Engine">Edge-TTS (Neural)</span>
+        </div>
+
+        <div id="hud-compact-telemetry" class="compact-hud-telemetry" title="Workstation Telemetry & Active AI Brain">
+          <span class="telemetry-compact-item" id="hud-compact-cpu">CPU --%</span>
+          <span class="telemetry-compact-sep">·</span>
+          <span class="telemetry-compact-item" id="hud-compact-ram">RAM --G</span>
+          <span class="telemetry-compact-sep">·</span>
+          <span class="telemetry-compact-item highlight" id="hud-compact-vram">VRAM --M</span>
+          <span class="telemetry-compact-sep">·</span>
+          <span class="telemetry-compact-item" id="hud-compact-brain">Qwen / Gemini</span>
+        </div>
+
+        <div class="compact-hud-actions">
+          <button type="button" id="hud-btn-focus-orb" class="compact-hud-btn primary-glow" title="Toggle Dedicated In-Chat Voice Focus Mode with VEGA Orb">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="4" r="1.5"/><circle cx="12" cy="20" r="1.5"/></svg>
+            <span>Focus Orb</span>
+          </button>
+          <button type="button" id="hud-pill-interview" class="compact-hud-btn hud-pill-interview-btn" title="Start 10-minute mock interview session">🎯 Mock Interview</button>
+          <button type="button" id="hud-pill-screen" class="compact-hud-btn hud-pill-screen-btn" title="Analyze active screen with Gemini Vision">🖥️ Look at Screen</button>
+          <button type="button" id="hud-pill-clipboard" class="compact-hud-btn hud-pill-clipboard-btn" title="Diagnose copied error or code from clipboard">📋 Explain Clipboard</button>
+          <button type="button" id="hud-pill-persona" class="compact-hud-btn hud-pill-persona-btn" title="Toggle between ₹0 Friend & Pro Persona">👥 Persona: Friend</button>
+          <button type="button" id="hud-pill-coach" class="compact-hud-btn hud-pill-coach-btn" title="Toggle Interview English phrasing tips">💡 English Coach: OFF</button>
+          <button type="button" id="hud-pill-sleep" class="compact-hud-btn hud-pill-sleep-btn" title="Toggle between Silent Sleep Mode and Active Listening">🌙 Go Silent</button>
+          <button type="button" id="hud-interrupt-btn" class="compact-hud-btn danger" title="Stop audio playback and active thinking">⏹ Stop</button>
+        </div>
+      </div>
+
+      <!-- ARC REACTOR HUD / VOICE FOCUS VIEW -->
+      <div id="hud-view">
+        <div class="hud-grid-overlay"></div>
+        <div id="hud-stat-streak" class="hidden"></div>
+        <button type="button" id="hud-btn-back-to-chat" class="hud-pill-btn primary hud-back-to-chat-btn" title="Return to full Chat conversation">← Back to Chat</button>
+
+        <!-- Top Panel: Core Telemetry -->
+        <div class="hud-telemetry-panel hud-panel-top">
+          <div>
+            <div class="hud-stat-title">CPU Load</div>
+            <div id="hud-stat-cpu" class="hud-stat-value">--%</div>
+          </div>
+          <div>
+            <div class="hud-stat-title">Memory Allocation</div>
+            <div id="hud-stat-ram" class="hud-stat-value">-- GB</div>
+          </div>
+          <div>
+            <div class="hud-stat-title">NVIDIA VRAM & GPU</div>
+            <div id="hud-stat-vram" class="hud-stat-value highlight">-- MB</div>
+          </div>
+          <div>
+            <div class="hud-stat-title">Active AI Brain</div>
+            <div id="hud-stat-model" class="hud-stat-value">Qwen 2.5 / Gemini</div>
+          </div>
+        </div>
+
+        <!-- Left Panel: Live Side Strip -->
+        <div id="hud-side-strip" class="hud-telemetry-panel hud-panel-left">
+          <div class="hud-stat-title">Open Tasks & Reminders</div>
+          <div id="hud-strip-tasks" class="hud-stat-value highlight">0 Pending</div>
+          <div style="margin-top:10px;" class="hud-stat-title">Network Mode</div>
+          <div id="hud-strip-network" class="hud-stat-value">Online 5-Brain</div>
+          <div style="margin-top:10px;" class="hud-stat-title">Persona Mode</div>
+          <div id="hud-strip-persona" class="hud-stat-value highlight">₹0 Friend (Telugu/Tenglish)</div>
+          <div style="margin-top:10px;" class="hud-stat-title">English Coach</div>
+          <div id="hud-strip-coach" class="hud-stat-value">OFF</div>
+        </div>
+
+        <!-- Central Arc Reactor Assembly -->
+        <div class="reactor-assembly">
+          <div class="reactor-ring-outer ambient-pulse"></div>
+          <div class="reactor-ring-mid ambient-pulse"></div>
+          <div class="reactor-ring-inner ambient-pulse"></div>
+          <div id="reactor-core" class="reactor-core ambient-pulse" title="Click core to trigger voice listening">
+            <span class="core-label">VEGA</span>
+          </div>
+        </div>
+        <div class="hud-bottom-stack">
+          <div class="hud-mode-pill-wrap">
+            <span id="hud-state-badge" class="hud-state-badge">IDLE</span>
+            <span id="hud-active-mode-badge" class="hud-mode-badge" style="cursor: pointer;" title="Click to toggle Chat / Work Mode">CHAT MODE</span>
+            <button type="button" id="hud-interrupt-btn" class="hud-interrupt-btn" title="Stop audio playback and cancel active thinking">⏹ Stop</button>
+          </div>
+
+          <!-- Quick Action Pills below the reactor -->
+          <div class="hud-quick-pills">
+            <button type="button" id="hud-pill-clipboard-focus" class="hud-pill-btn hud-pill-clipboard-btn" title="Diagnose copied error or code from clipboard">📋 Explain Clipboard</button>
+            <button type="button" id="hud-pill-screen-focus" class="hud-pill-btn hud-pill-screen-btn" title="Analyze active screen with Gemini Vision">🖥️ Look at Screen</button>
+            <button type="button" id="hud-pill-interview-focus" class="hud-pill-btn hud-pill-interview-btn" title="Start 10-minute mock interview session">🎯 Mock Interview</button>
+            <button type="button" id="hud-pill-persona-focus" class="hud-pill-btn hud-pill-persona-btn" title="Toggle between ₹0 Friend & Pro Persona">👥 Persona: Friend</button>
+            <button type="button" id="hud-pill-coach-focus" class="hud-pill-btn hud-pill-coach-btn" title="Toggle Interview English phrasing tips">💡 English Coach: OFF</button>
+          </div>
+
+          <!-- Bottom Panel: Live Transcript & Input Bar -->
+          <div class="hud-telemetry-panel hud-panel-bottom">
+            <div class="hud-stat-title">Real-Time Voice Stream & Transcript</div>
+            <div id="hud-transcript" class="hud-transcript-text">"Listening for 'Hey Vega' or voice commands..."</div>
+
+            <!-- HUD Text Input Bar for quiet environments -->
+            <div class="hud-input-bar">
+              <input type="text" id="hud-text-input" name="hud-text-input" class="hud-text-input" placeholder="Type a message or command for Vega..." aria-label="Type a message or command for Vega" />
+              <button type="button" id="hud-text-send-btn" class="hud-input-btn primary" title="Send message to Vega">Send</button>
+              <button type="button" id="hud-mic-btn" class="hud-input-btn" title="Toggle microphone listening">🎙️ Mic</button>
+              <button type="button" id="hud-bottom-stop-btn" class="hud-input-btn danger" title="Stop Vega speech / generation">⏹ Stop</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Audio & Biometrics -->
+        <div class="hud-telemetry-panel hud-panel-right">
+          <div class="hud-stat-title">Voice Pipeline</div>
+          <div id="hud-stat-voice-pipeline" class="hud-stat-value highlight">Edge-TTS / Groq STT</div>
+          <div style="margin-top:8px;" class="hud-stat-title">Voice Engine</div>
+          <div id="hud-stat-voice-engine" class="hud-stat-value highlight">Edge-TTS (Neural)</div>
+          <div style="margin-top:8px;" class="hud-stat-title">Speaker Biometrics</div>
+          <div class="hud-stat-value">Voiceprint Active</div>
+          <div style="margin-top:8px;" class="hud-stat-title">Orchestrator Bridge</div>
+          <div id="hud-stat-orchestrator" class="hud-stat-value">Ready (Port 8765)</div>
+        </div>
+
+        <!-- Mock Interview Overlay inside HUD -->
+        <div id="hud-interview-overlay" class="hud-interview-overlay hidden">
+          <div class="hud-interview-card">
+            <div class="hud-interview-header">
+              <div class="hud-interview-title-wrap">
+                <span class="hud-interview-badge">10-MIN MOCK INTERVIEW</span>
+                <h3 id="hud-interview-role">DevOps & Cloud Engineer</h3>
+                <span id="hud-interview-company" class="hud-interview-sub">Target Cloud Tech</span>
+              </div>
+              <div class="hud-interview-meta">
+                <span id="hud-interview-step" class="interview-step-pill">Question 1 / 5</span>
+                <button type="button" id="hud-interview-exit-btn" class="mini-btn" title="End Interview Session">Exit</button>
+              </div>
+            </div>
+            <div class="hud-interview-body">
+              <div class="hud-interview-qtype" id="hud-interview-qtype">Core Technical Competency</div>
+              <div class="hud-interview-question" id="hud-interview-question">Loading interview question...</div>
+              <div id="hud-interview-feedback" class="hud-interview-feedback hidden"></div>
+            </div>
+            <div class="hud-interview-footer">
+              <div class="hud-interview-input-wrap">
+                <textarea id="hud-interview-answer-input" name="hud-interview-answer-input" rows="2" placeholder="Type your answer, or speak clearly via microphone..." aria-label="Type your interview answer"></textarea>
+                <button type="button" id="hud-interview-submit-btn" class="primary-btn mini-btn">Submit Answer</button>
+                <button type="button" id="hud-interview-next-btn" class="secondary-btn mini-btn hidden">Next Question</button>
+                <button type="button" id="hud-interview-end-btn" class="mini-btn">End Interview</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE RESUME DRAFT CO-BUILDER BAR (Session Co-Pilot) -->
+      <div id="live-resume-draft-bar" class="live-resume-draft-bar hidden" role="region" aria-label="Interactive Resume Co-Builder Draft">
+        <div class="resume-draft-left">
+          <div class="resume-draft-badge">
+            <span class="resume-draft-dot"></span>
+            <span id="resume-draft-title" class="resume-draft-title">Live Resume Draft</span>
+          </div>
+          <div id="resume-draft-meta" class="resume-draft-meta">
+            <span id="resume-draft-role" class="resume-meta-role">DevOps & Cloud Engineer</span>
+            <span class="resume-meta-sep">@</span>
+            <span id="resume-draft-company" class="resume-meta-company">Target Company</span>
+          </div>
+        </div>
+        <div class="resume-draft-chips" id="resume-draft-chips">
+          <!-- Filled dynamically: selected projects, skills count -->
+        </div>
+        <div class="resume-draft-actions">
+          <button type="button" id="resume-draft-export-btn" class="resume-draft-btn primary" title="Generate ATS 1-page PDF">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Export PDF</span>
+          </button>
+          <button type="button" id="resume-draft-close-btn" class="resume-draft-btn close" title="Close Resume Co-Builder Session">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- MESSAGES THREAD -->
+      <div id="messages-container">
+        <!-- WELCOME SCREEN -->
+        <div id="welcome-screen">
+          <div class="welcome-badge">VEGA</div>
+          <h1 id="welcome-heading">Welcome to Vega</h1>
+          <p class="welcome-sub">How can I assist you with your studies, code, or laptop today?</p>
+          <div class="suggestion-grid">
+            <div class="card" id="card-briefing">
+              <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 5 13h6l-1 9 9-12h-6l1-8Z"/></svg></div>
+              <div class="card-title">Morning Briefing</div>
+              <div class="card-desc">Weather, tasks, reminders, and daily news</div>
+            </div>
+            <div class="card" id="card-python">
+              <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3c-4 0-6 2-6 5v3h8v2H6c-2 0-3 1-3 3s1 4 4 4h3v-3c0-2 1-3 3-3h5c2 0 3-2 3-5s-2-6-6-6h-3Z"/><circle cx="9" cy="6" r=".6"/><circle cx="16" cy="18" r=".6"/></svg></div>
+              <div class="card-title">Python Code</div>
+              <div class="card-desc">Monitor CPU & GPU usage with step-by-step notes</div>
+            </div>
+            <div class="card" id="card-tenglish">
+              <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5Z"/><path d="M8 9h8M8 12h5"/></svg></div>
+              <div class="card-title">Tenglish Chat</div>
+              <div class="card-desc">Natural Telugu-English conversation & study</div>
+            </div>
+            <div class="card" id="card-lablog">
+              <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M2 20h20M9 17l-1 3m7-3 1 3"/></svg></div>
+              <div class="card-title">DevOps & Lab Log</div>
+              <div class="card-desc">Linux, Docker, and practical milestone tracking</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DYNAMIC MESSAGE BUBBLES -->
+        <div id="messages-list"></div>
+      </div>
+
+      <!-- FULL LAB LOG PAGE (lablog.js) -->
+      <section id="lablog-page" class="hidden">
+        <div class="lab-wrap" id="lab-wrap"></div>
+      </section>
+
+      <!-- WORK MODE SPLIT WORKBENCH (Gemini Canvas / VS Code style) -->
+      <div id="work-workspace" class="work-workspace-container hidden">
+        <!-- Left Pane: Contextual Work Conversation -->
+        <div class="work-chat-pane">
+          <div class="work-chat-header">
+            <div class="work-pane-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Work Assistant</span>
+            </div>
+            <button id="work-clear-chat-btn" class="mini-btn" title="Clear conversation">Clear</button>
+          </div>
+
+          <div id="work-messages-list" class="work-messages-scroll">
+            <div class="work-welcome-box">
+              <h3>Work Mode Workbench</h3>
+              <p>Contextual coding assistant with direct workspace access. Inspect files, generate Aider-style fuzzy diffs, and execute terminal commands.</p>
+            </div>
+          </div>
+
+          <div class="work-composer-wrap">
+            <div id="work-context-bar" class="work-context-bar">
+              <span class="context-label">Context:</span>
+              <span id="work-active-file-chip" class="work-file-badge hidden">None</span>
+            </div>
+            <div class="work-input-box">
+              <textarea id="work-prompt-input" name="work-prompt-input" rows="2" placeholder="Describe edits, ask about files, or request terminal runs... (Shift+Enter for newline)" aria-label="Work Mode prompt input"></textarea>
+              <button id="work-send-btn" class="primary-btn work-send-btn" title="Send Work instruction">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <span>Send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Pane: Interactive Workbench -->
+        <div class="work-bench-pane">
+          <div class="workbench-tabs-bar">
+            <div class="workbench-tabs" role="tablist">
+              <button type="button" id="wb-tab-files" class="wb-tab active" role="tab" title="File Explorer">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Explorer</span>
+              </button>
+              <button type="button" id="wb-tab-editor" class="wb-tab" role="tab" title="Code Editor">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span id="wb-editor-tab-label">Editor</span>
+              </button>
+              <button type="button" id="wb-tab-diff" class="wb-tab" role="tab" title="Aider Diff Viewer">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+                <span>Diff Viewer</span>
+              </button>
+              <button type="button" id="wb-tab-terminal" class="wb-tab" role="tab" title="Terminal Output">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                <span>Terminal</span>
+              </button>
+            </div>
+            <div class="workbench-actions">
+              <button id="wb-refresh-tree-btn" class="mini-btn" title="Refresh files">Refresh</button>
+            </div>
+          </div>
+
+          <div class="workbench-body">
+            <!-- 1. File Explorer -->
+            <div id="work-file-tree-view" class="wb-viewport active">
+              <div class="wb-view-header">
+                <span class="wb-view-title">WORKSPACE FILES</span>
+                <span id="wb-root-path-label" class="wb-subpath">./mybot</span>
+              </div>
+              <div id="work-file-tree" class="file-tree-container">
+                <div class="tree-loading">Loading workspace files...</div>
+              </div>
+            </div>
+
+            <!-- 2. Code Editor / Viewer -->
+            <div id="work-editor-view" class="wb-viewport hidden">
+              <div class="wb-editor-header">
+                <span id="wb-editor-filename">No file selected</span>
+                <div class="wb-editor-actions">
+                  <button id="wb-save-file-btn" class="mini-btn highlight" disabled>Save</button>
+                  <button id="wb-attach-context-btn" class="mini-btn" disabled>+ Add to Context</button>
+                </div>
+              </div>
+              <textarea id="work-code-editor" name="work-code-editor" class="work-code-textarea" spellcheck="false" placeholder="Select a file from the explorer to view or edit..." aria-label="Work Mode code editor"></textarea>
+            </div>
+
+            <!-- 3. Aider-Style Diff Viewer -->
+            <div id="work-diff-view" class="wb-viewport hidden">
+              <div class="wb-diff-header">
+                <div class="diff-title-wrap">
+                  <span class="diff-badge">AIDER DIFF</span>
+                  <span id="wb-diff-target-file">No active diff proposal</span>
+                </div>
+                <div class="diff-actions">
+                  <button id="wb-apply-diff-btn" class="mini-btn btn-apply-diff" disabled>Apply Diff</button>
+                  <button id="wb-reject-diff-btn" class="mini-btn btn-reject-diff" disabled>Reject</button>
+                </div>
+              </div>
+              <div id="work-diff-container" class="diff-container">
+                <div class="diff-empty-msg">No diff proposed yet. Ask Vega to edit a file in Work Mode to review the SEARCH / REPLACE block here.</div>
+              </div>
+            </div>
+
+            <!-- 4. Terminal Output View -->
+            <div id="work-terminal-view" class="wb-viewport hidden">
+              <div class="wb-term-header">
+                <span>WORKSPACE TERMINAL</span>
+                <span class="term-status-badge">READY</span>
+              </div>
+              <div id="work-terminal-output" class="terminal-output-box">
+                <div class="term-line prompt">Vega Workspace Terminal (Shell runner)</div>
+                <div class="term-line note">Commands run directly in the active project workspace.</div>
+              </div>
+              <div class="work-terminal-input-bar">
+                <span class="term-prompt-arrow">&gt;</span>
+                <input type="text" id="work-terminal-cmd" name="work-terminal-cmd" placeholder="e.g. dir, git status, python test..." aria-label="Terminal command input" />
+                <button id="work-terminal-run-btn" class="mini-btn highlight">Run</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAREER WORKBENCH (Vega v2.2 - Scam Shield, ATS Resumes & Application Tracker) -->
+      <div id="career-workspace" class="career-workspace-container hidden">
+        <!-- Sub-navigation Header Bar -->
+        <div class="career-subnav-bar">
+          <div class="career-subnav-tabs" role="tablist">
+            <button type="button" id="career-tab-feed" class="career-subtab-btn active" role="tab" aria-selected="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              <span>Feed & Scanner</span>
+            </button>
+            <button type="button" id="career-tab-inspector" class="career-subtab-btn" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Job Inspector & Tailor</span>
+            </button>
+            <button type="button" id="career-tab-tracker" class="career-subtab-btn" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Application Tracker</span>
+            </button>
+            <button type="button" id="career-tab-vault" class="career-subtab-btn" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Profile Vault</span>
+            </button>
+          </div>
+          <div class="career-subnav-status" id="career-scan-status">
+            Ready to discover verified fresher & internship opportunities.
+          </div>
+        </div>
+
+        <!-- GMAIL LABEL SYNC & STATUS BAR (Read-Only) -->
+        <div class="career-gmail-sync-bar" id="career-gmail-bar">
+          <div class="gmail-bar-left">
+            <span class="gmail-logo-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <span>Gmail Label Sync</span>
+            </span>
+            <span id="gmail-status-pill" class="gmail-status-pill status-unconfigured">Unconfigured</span>
+            <div class="gmail-label-input-wrap">
+              <label for="gmail-target-label">Label:</label>
+              <input type="text" id="gmail-target-label" name="gmail-target-label" class="gmail-label-input" value="Vega-Career" title="Syncs strictly from this single Gmail label" aria-label="Target Gmail label" />
+            </div>
+            <label class="gmail-calendar-toggle" for="gmail-calendar-toggle" title="Opt-in: automatically create reminders & Google Calendar events for OA/interview deadlines">
+              <input type="checkbox" id="gmail-calendar-toggle" name="gmail-calendar-toggle" aria-label="Toggle Google Calendar deadlines" />
+              <span>Calendar Deadlines</span>
+            </label>
+          </div>
+          <div class="gmail-bar-right">
+            <button type="button" id="gmail-sync-btn" class="mini-btn sync-gmail-btn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+              <span>Sync Label Now</span>
+            </button>
+            <button type="button" id="gmail-setup-toggle-btn" class="mini-btn setup-toggle-btn">Setup Guide ▾</button>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE OAUTH SETUP GUIDE CARD -->
+        <div id="gmail-setup-guide" class="gmail-setup-guide-card hidden">
+          <div class="setup-guide-header">
+            <h4>Google Cloud OAuth Setup Guide (Read-Only)</h4>
+            <span class="guide-note">Strictly read-only ('gmail.readonly'). Vega never asks for send, modify, or delete permissions.</span>
+          </div>
+          <div class="setup-steps-grid">
+            <div class="setup-step-item">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <strong>Create GCP Project & Enable API</strong>
+                <p>In <a href="https://console.cloud.google.com" target="_blank" rel="noopener">Google Cloud Console</a>, create a project and enable <strong>Gmail API</strong> (and optionally <strong>Google Calendar API</strong>).</p>
+              </div>
+            </div>
+            <div class="setup-step-item">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <strong>Configure OAuth Consent</strong>
+                <p>Under <em>APIs & Services &gt; OAuth consent screen</em>, choose <strong>External</strong>, add your Gmail under Test Users, and add scope <code>gmail.readonly</code>.</p>
+              </div>
+            </div>
+            <div class="setup-step-item">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <strong>Download credentials.json</strong>
+                <p>Go to <em>Credentials &gt; Create Credentials &gt; OAuth client ID</em> (Type: <strong>Desktop app</strong>). Download JSON and place it in <code>career_vault/credentials.json</code>.</p>
+              </div>
+            </div>
+            <div class="setup-step-item">
+              <div class="step-num">4</div>
+              <div class="step-body">
+                <strong>Authenticate & Sync</strong>
+                <p>Label job emails in Gmail as <strong>Vega-Career</strong>, then click <strong>Sync Label Now</strong> above to authenticate once and sync alerts & deadlines.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. FEED & SCANNER SUB-VIEW -->
+        <div id="career-view-feed" class="career-subview">
+          <div class="career-dropin-card">
+            <div class="dropin-header">
+              <h4>Quick Opportunity Scan & Scam Check</h4>
+              <div class="feed-controls-group">
+                <label class="adzuna-checkbox-label" for="career-include-adzuna" title="Adzuna requires manual trigger to preserve API quota">
+                  <input type="checkbox" id="career-include-adzuna" name="career-include-adzuna" aria-label="Include Adzuna feeds" />
+                  <span>Include Adzuna (Manual)</span>
+                </label>
+                <button id="career-scan-btn" class="primary-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                  <span>Scan Feeds</span>
+                </button>
+              </div>
+            </div>
+            <div class="dropin-inputs-row">
+              <input type="text" id="career-url-input" name="career-url-input" class="career-input" placeholder="Paste job URL (LinkedIn, Greenhouse, Lever, Ashby, Internshala, Naukri)..." aria-label="Job URL input" />
+              <input type="file" id="career-jd-pdf-input" name="career-jd-pdf-input" accept=".pdf" class="hidden" aria-label="Upload job description PDF" />
+              <button type="button" class="mini-btn upload-jd-btn" onclick="document.getElementById('career-jd-pdf-input').click()">Upload JD PDF</button>
+            </div>
+            <div class="dropin-textarea-wrap">
+              <textarea id="career-text-input" name="career-text-input" rows="2" class="career-textarea" placeholder="Or paste full job description text directly here..." aria-label="Job description text input"></textarea>
+            </div>
+            <div class="dropin-actions">
+              <button id="career-analyze-btn" class="primary-btn mini-btn">Analyze & Check Scam</button>
+              <span id="career-analyze-status" class="career-status-text"></span>
+            </div>
+          </div>
+
+          <div class="career-feed-container">
+            <div class="career-feed-header-row">
+              <h4 class="section-title">Discovered Opportunities & Direct Ingests</h4>
+              <div class="career-filter-pills" id="career-filter-pills" role="tablist">
+                <button type="button" class="career-filter-pill active" data-filter="promising">Promising & Safe <span class="pill-count" id="count-promising"></span></button>
+                <button type="button" class="career-filter-pill" data-filter="internships">Internships <span class="pill-count" id="count-internships"></span></button>
+                <button type="button" class="career-filter-pill" data-filter="fresher">Fresher / Entry <span class="pill-count" id="count-fresher"></span></button>
+                <button type="button" class="career-filter-pill" data-filter="fake">Fake / Quarantined <span class="pill-count" id="count-fake"></span></button>
+                <button type="button" class="career-filter-pill" data-filter="all">All <span class="pill-count" id="count-all"></span></button>
+                <button type="button" class="career-filter-pill toggle-pill" id="career-india-toggle" title="Filter strictly for jobs in India or Indian tech hubs">India Only</button>
+                <button type="button" class="career-filter-pill toggle-pill" id="career-worldwide-remote-toggle" title="Filter strictly for unrestricted worldwide global remote roles">Worldwide Remote</button>
+              </div>
+            </div>
+            <div id="career-feed-cards" class="career-cards-grid"></div>
+          </div>
+        </div>
+
+        <!-- 2. JOB INSPECTOR & RESUME TAILOR SUB-VIEW -->
+        <div id="career-view-inspector" class="career-subview hidden">
+          <div class="career-inspector-split">
+            <!-- Left Column: Scam Shield & Skills -->
+            <div class="inspector-col-left">
+              <div class="inspector-card">
+                <div id="inspector-blocked-alert" class="blocked-url-banner hidden">
+                  <div class="blocked-alert-icon">⚠️</div>
+                  <div class="blocked-alert-body">
+                    <strong>Automated Scrape Blocked by Portal</strong>
+                    <p>This job site actively blocks automated scrapers. Use our <strong>1-Click Brave Extension</strong> from your open browser tab, or paste the job description text manually above.</p>
+                  </div>
+                </div>
+                <div class="inspector-title-row">
+                  <div>
+                    <h3 id="inspector-company">Select a Job</h3>
+                    <div id="inspector-role" class="inspector-subtitle">Inspect role details and scam flags</div>
+                    <div id="inspector-location" class="inspector-loc-tag"></div>
+                  </div>
+                  <div class="inspector-score-pill">
+                    <span id="inspector-match-score" class="score-val">--</span>
+                    <span class="score-label">Fit Score</span>
+                  </div>
+                </div>
+
+                <div class="scam-shield-box">
+                  <div class="shield-header">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Fake-Job & Scam Shield Status</span>
+                    <span id="inspector-risk-badge" class="risk-badge risk-safe">SAFE</span>
+                  </div>
+                  <ul id="inspector-scam-flags" class="scam-flags-list"></ul>
+                </div>
+
+                <div class="skills-breakdown-box">
+                  <h5>Matched Verified Skills</h5>
+                  <div id="inspector-matched-skills" class="skills-pill-wrap"></div>
+
+                  <h5 style="margin-top:12px;">Missing Skills / Learning Gaps</h5>
+                  <div id="inspector-missing-skills" class="skills-pill-wrap"></div>
+
+                  <!-- Interactive JD Tailoring & Project Matching -->
+                  <div class="interactive-jd-tailor-box" style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.06);">
+                    <div class="jd-tailor-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                      <h5 style="margin:0;">🎯 Interactive JD Tailoring & Project Matching</h5>
+                      <button type="button" id="career-discuss-chat-btn" class="mini-btn" title="Open Interactive Resume Co-Builder in Chat">🤝 Discuss & Co-Build Resume</button>
+                    </div>
+                    <div class="jd-tailor-section">
+                      <div style="font-size:11px; font-weight:600; color:#666; margin-bottom:4px;">Skill Experience Verification (Click to toggle):</div>
+                      <div id="inspector-skill-decisions" class="skill-decisions-wrap"></div>
+                    </div>
+                    <div class="jd-tailor-section" style="margin-top:10px;">
+                      <div style="font-size:11px; font-weight:600; color:#666; margin-bottom:4px;">Top Recommended Real Projects:</div>
+                      <div id="inspector-recommended-projects" class="recommended-projects-wrap"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="interview-prep-box">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h5>Technical Interview Prep (Tied to Your Real Projects)</h5>
+                    <button id="career-start-mock-btn" class="primary-btn mini-btn" title="Launch 10-Minute Voice/HUD Mock Interview grounded in this job">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                      <span>Launch Mock Interview</span>
+                    </button>
+                  </div>
+                  <div id="inspector-interview-questions" class="interview-questions-list"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Tailored Resume & Cover Note -->
+            <div class="inspector-col-right">
+              <div class="inspector-card">
+                <div class="resume-actions-header">
+                  <h4>Fact-Locked 1-Page ATS Resume</h4>
+                  <button id="career-gen-resume-btn" class="primary-btn mini-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+                    <span>Generate 1-Page Tailored PDF</span>
+                  </button>
+                </div>
+                <div id="career-resume-pdf-status" class="resume-status-box">
+                  Click above to render a strict 1-page ATS resume with clickable GitHub/LinkedIn links.
+                </div>
+
+                <div class="outreach-note-box">
+                  <div class="outreach-header">
+                    <h4>Outreach & Referral Drafter</h4>
+                    <div class="outreach-actions-row">
+                      <button id="career-draft-outreach-btn" class="primary-btn mini-btn" title="Draft personalized LinkedIn DM & Cold Email via 5-Brain Router">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <span>Draft Referral / Cold DM</span>
+                      </button>
+                      <button id="career-copy-note-btn" class="mini-btn">Copy Note</button>
+                    </div>
+                  </div>
+                  <div class="outreach-subtabs" id="outreach-subtabs">
+                    <button type="button" class="outreach-subtab active" data-outreach-tab="cover">Cover Note</button>
+                    <button type="button" class="outreach-subtab" data-outreach-tab="linkedin">LinkedIn DM</button>
+                    <button type="button" class="outreach-subtab" data-outreach-tab="conn">Connection Note (&lt;300 chars)</button>
+                    <button type="button" class="outreach-subtab" data-outreach-tab="email">Cold Email</button>
+                  </div>
+                  <div id="outreach-editor-wrap">
+                    <textarea id="inspector-cover-note" name="inspector-cover-note" rows="8" class="career-textarea" readonly placeholder="Cover note appears here..." aria-label="Cover note content"></textarea>
+                    <textarea id="inspector-linkedin-dm" name="inspector-linkedin-dm" rows="8" class="career-textarea hidden" readonly placeholder="Click 'Draft Referral / Cold DM' to generate personalized LinkedIn referral message..." aria-label="LinkedIn DM content"></textarea>
+                    <textarea id="inspector-connection-note" name="inspector-connection-note" rows="5" class="career-textarea hidden" readonly placeholder="Click 'Draft Referral / Cold DM' to generate &lt;300 character connection request note..." aria-label="Connection request note content"></textarea>
+                    <div id="inspector-cold-email-wrap" class="hidden">
+                      <input type="text" id="inspector-email-subject" name="inspector-email-subject" class="career-input" readonly placeholder="Subject line..." style="margin-bottom:6px; font-weight:600;" aria-label="Cold email subject" />
+                      <textarea id="inspector-email-body" name="inspector-email-body" rows="7" class="career-textarea" readonly placeholder="Cold email body..." aria-label="Cold email body"></textarea>
+                    </div>
+                  </div>
+                  <div id="outreach-status-msg" class="career-status-text" style="margin-top:6px;"></div>
+                </div>
+
+                <div class="apply-footer">
+                  <a id="career-open-apply-btn" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn link-btn">
+                    <span>Open Official Apply Portal</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. APPLICATION TRACKER SUB-VIEW -->
+        <div id="career-view-tracker" class="career-subview hidden">
+          <div class="career-metrics-row">
+            <div class="metric-card"><div class="m-val" id="metric-total">0</div><div class="m-lbl">Total Tracked</div></div>
+            <div class="metric-card"><div class="m-val" id="metric-new">0</div><div class="m-lbl">New</div></div>
+            <div class="metric-card"><div class="m-val" id="metric-tailored">0</div><div class="m-lbl">Tailored PDF</div></div>
+            <div class="metric-card"><div class="m-val" id="metric-applied">0</div><div class="m-lbl">Applied</div></div>
+            <div class="metric-card"><div class="m-val" id="metric-interview">0</div><div class="m-lbl">Interview</div></div>
+            <div class="metric-card"><div class="m-val" id="metric-rejected">0</div><div class="m-lbl">Rejected</div></div>
+            <div class="metric-card metric-scam"><div class="m-val" id="metric-scam">0</div><div class="m-lbl">Blocked Scam</div></div>
+          </div>
+
+          <div class="career-table-wrap">
+            <table class="career-tracker-table">
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Role</th>
+                  <th>Match</th>
+                  <th>Status</th>
+                  <th>Tailored Resume</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="career-tracker-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. PROFILE VAULT SUB-VIEW -->
+        <div id="career-view-vault" class="career-subview hidden">
+          <div class="vault-card">
+            <div class="vault-header">
+              <div>
+                <h3>Fact-Locked Career Profile Vault</h3>
+                <p>Verified background facts locked to prevent LLM hallucinations. All tailored resumes are strictly generated from this structured record.</p>
+              </div>
+              <div class="vault-actions">
+                <input type="file" id="career-import-resume-input" name="career-import-resume-input" accept=".pdf" class="hidden" aria-label="Import Resume PDF" />
+                <button type="button" class="mini-btn" id="career-import-resume-btn" onclick="const inp=document.getElementById('career-import-resume-input');if(inp){inp.value='';inp.click();}">Import Resume PDF</button>
+                <button id="career-save-profile-btn" class="primary-btn mini-btn">Save Profile</button>
+              </div>
+            </div>
+
+            <!-- Structured Editable Form Grid -->
+            <div class="vault-form-grid">
+              <div class="vault-form-group">
+                <label for="vault-name">Full Name</label>
+                <input type="text" id="vault-name" name="vault-name" class="career-input" placeholder="Your Full Name" />
+              </div>
+              <div class="vault-form-group">
+                <label for="vault-headline">Professional Headline / Target Role</label>
+                <input type="text" id="vault-headline" name="vault-headline" class="career-input" placeholder="e.g. DevOps & Cloud Engineer" />
+              </div>
+              <div class="vault-form-group">
+                <label for="vault-phone">Phone Number</label>
+                <input type="text" id="vault-phone" name="vault-phone" class="career-input" placeholder="+91 ..." />
+              </div>
+              <div class="vault-form-group">
+                <label for="vault-email">Email Address</label>
+                <input type="email" id="vault-email" name="vault-email" class="career-input" placeholder="email@example.com" />
+              </div>
+              <div class="vault-form-group">
+                <label for="vault-location">Location</label>
+                <input type="text" id="vault-location" name="vault-location" class="career-input" placeholder="e.g. Chennai / Remote" />
+              </div>
+              <div class="vault-form-group">
+                <label for="vault-github">GitHub Profile URL</label>
+                <input type="url" id="vault-github" name="vault-github" class="career-input" placeholder="https://github.com/..." />
+              </div>
+              <div class="vault-form-group">
+                <label for="vault-linkedin">LinkedIn Profile URL</label>
+                <input type="url" id="vault-linkedin" name="vault-linkedin" class="career-input" placeholder="https://linkedin.com/in/..." />
+              </div>
+              <div class="vault-form-group full-width">
+                <label for="vault-summary">Professional Summary</label>
+                <textarea id="vault-summary" name="vault-summary" rows="2" class="career-textarea" placeholder="Core professional focus, background, and proven engineering strengths..."></textarea>
+              </div>
+              <div class="vault-form-group full-width">
+                <label for="vault-education">Education (Institution, Degree, Years, GPA)</label>
+                <textarea id="vault-education" name="vault-education" rows="3" class="career-textarea" placeholder="Institute of Science and Technology | B.Tech CSE | 2023 - 2027 | CGPA: 8.0/10"></textarea>
+              </div>
+              <div class="vault-form-group full-width">
+                <label for="vault-skills">Verified Skills (Languages, Cloud/DevOps, Tools, OS/Networking)</label>
+                <textarea id="vault-skills" name="vault-skills" rows="3" class="career-textarea" placeholder="Languages: Python, Go, Bash&#10;Cloud & DevOps: Docker, Kubernetes, AWS, GCP, CI/CD&#10;Systems & Tools: Linux, Git, systemd, Prometheus"></textarea>
+              </div>
+              <div class="vault-form-group full-width">
+                <label for="vault-projects">Verified Projects & Proven Impact</label>
+                <textarea id="vault-projects" name="vault-projects" rows="4" class="career-textarea" placeholder="Project Name | Tech Stack | Key metrics and accomplishments..."></textarea>
+              </div>
+            </div>
+
+            <!-- Collapsible Raw JSON Editor -->
+            <div class="vault-raw-section">
+              <button type="button" id="vault-toggle-raw-btn" class="mini-btn vault-toggle-raw-btn">
+                <span>View / Edit Raw Vault JSON</span>
+              </button>
+              <div id="vault-raw-container" class="vault-raw-wrap hidden">
+                <textarea id="career-vault-json" name="career-vault-json" class="vault-editor" rows="12" aria-label="Raw Profile JSON"></textarea>
+              </div>
+            </div>
+
+            <!-- Synced GitHub Portfolio Section -->
+            <div class="vault-github-sync-section" style="margin-top:20px; padding-top:15px; border-top:1px solid rgba(0,0,0,0.08);">
+              <div class="vault-github-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div>
+                  <h4 style="margin:0; font-size:14px; font-weight:600;">Verified GitHub Repositories (Portfolio Sync)</h4>
+                  <p style="margin:2px 0 0; font-size:12px; color:#666;">Cached repositories for automated ATS resume project selection.</p>
+                </div>
+                <button type="button" id="career-github-sync-btn" class="mini-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                  <span>Sync GitHub Portfolio</span>
+                </button>
+              </div>
+              <div id="career-github-repos-list" class="github-repos-grid"></div>
+            </div>
+
+            <div id="career-vault-status" class="career-status-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRACTICE LAB WORKSPACE (Full Window Mode) -->
+      <div id="practice-workspace" class="practice-workspace-wrapper hidden" aria-label="DevOps Practice Lab & Health Hub">
+        <div class="practice-workspace-inner">
+          <div class="practice-lab-header">
+            <div class="practice-lab-title-group">
+              <span class="practice-lab-badge">DEVOPS LAB & TELEMETRY</span>
+              <h2>DevOps Practice Lab & Health Hub</h2>
+              <span class="practice-lab-sub">Broken-config challenge drills, live system/repo health checks, study flashcards & safe simulator.</span>
+            </div>
+            <div class="practice-lab-nav-actions">
+              <button id="practice-nav-chat" type="button" class="mini-btn">Back to Chat</button>
+              <button id="practice-nav-work" type="button" class="mini-btn">Back to Career</button>
+            </div>
+          </div>
+
+          <!-- LAB SUB-NAVIGATION BAR -->
+          <div class="practice-subtabs-bar">
+            <button type="button" class="practice-subtab-btn active" data-lab-tab="drills">DevOps Drills</button>
+            <button type="button" class="practice-subtab-btn" data-lab-tab="health">System & Repo Health</button>
+            <button type="button" class="practice-subtab-btn" data-lab-tab="flashcards">Study Flashcards</button>
+            <button type="button" class="practice-subtab-btn" data-lab-tab="sim">Linux Simulator</button>
+          </div>
+
+          <!-- 1. DEVOPS DRILLS SUBVIEW -->
+          <div id="lab-subview-drills" class="lab-subview">
+            <div class="drill-controls-card">
+              <div class="drill-controls-row">
+                <div class="drill-select-wrap">
+                  <label for="drill-topic-select">Select Challenge Track:</label>
+                  <select id="drill-topic-select" name="drill-topic-select" class="drill-select" aria-label="Select Challenge Track">
+                    <option value="Dockerfile">Dockerfile (Microservices & Security)</option>
+                    <option value="docker-compose.yml">docker-compose.yml (Multi-Container Services)</option>
+                    <option value="Kubernetes YAML">Kubernetes YAML (Pods & Deployments)</option>
+                    <option value="Bash Script">Bash Script (Linux Automation & CI)</option>
+                    <option value="GitHub Actions YAML">GitHub Actions YAML (CI/CD Pipeline)</option>
+                  </select>
+                </div>
+                <button type="button" id="drill-generate-btn" class="primary-btn mini-btn">
+                  Generate Broken Config Drill
+                </button>
+              </div>
+
+              <div id="drill-meta-banner" class="drill-meta-banner hidden">
+                <div class="drill-meta-left">
+                  <span id="drill-topic-badge" class="badge">Dockerfile</span>
+                  <h3 id="drill-title" class="drill-title">Challenge Title</h3>
+                </div>
+                <div class="drill-actions">
+                  <button type="button" id="drill-hint-btn" class="mini-btn">Show Hint</button>
+                  <button type="button" id="drill-grade-btn" class="primary-btn mini-btn">Submit & Grade (5-Brain)</button>
+                </div>
+              </div>
+
+              <div id="drill-hints-box" class="drill-hints-box hidden"></div>
+
+              <div class="drill-editor-wrap">
+                <textarea id="drill-editor" name="drill-editor" class="drill-editor" rows="14" spellcheck="false" placeholder="Click 'Generate Broken Config Drill' above to load a real-world broken DevOps configuration..." aria-label="DevOps broken configuration drill editor"></textarea>
+              </div>
+
+              <div id="drill-grade-result" class="drill-grade-result hidden"></div>
+            </div>
+
+            <div class="drill-history-card">
+              <h4>Drill History & Mastery</h4>
+              <div id="drill-history-list" class="drill-history-list"></div>
+            </div>
+          </div>
+
+          <!-- 2. SYSTEM & REPO HEALTH SUBVIEW -->
+          <div id="lab-subview-health" class="lab-subview hidden">
+            <div class="health-header-row">
+              <h4>Live Diagnostic & Leak Guard Telemetry</h4>
+              <button type="button" id="lab-refresh-health-btn" class="mini-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                <span>Refresh Diagnostics</span>
+              </button>
+            </div>
+
+            <div class="health-grid">
+              <div class="health-card" id="health-card-vitals">
+                <div class="health-card-head">
+                  <span class="health-icon">💻</span>
+                  <h5>Host Hardware Vitals</h5>
+                </div>
+                <div class="health-card-body" id="health-vitals-body">
+                  <div class="health-stat-line"><span>CPU Usage:</span> <strong id="health-cpu-val">--%</strong></div>
+                  <div class="health-stat-line"><span>RAM Usage:</span> <strong id="health-ram-val">-- GB</strong></div>
+                  <div class="health-stat-line"><span>GPU / VRAM:</span> <strong id="health-vram-val">-- MB</strong></div>
+                </div>
+              </div>
+
+              <div class="health-card" id="health-card-docker">
+                <div class="health-card-head">
+                  <span class="health-icon">🐳</span>
+                  <h5>Docker Engine Health</h5>
+                  <span id="health-docker-badge" class="badge">Checking...</span>
+                </div>
+                <div class="health-card-body" id="health-docker-body">
+                  <div class="health-stat-line"><span>Daemon Status:</span> <strong id="health-docker-status">--</strong></div>
+                  <div class="health-stat-line"><span>Running Containers:</span> <strong id="health-docker-containers">0</strong></div>
+                  <div class="health-stat-line"><span>Images Cached:</span> <strong id="health-docker-images">0</strong></div>
+                </div>
+              </div>
+
+              <div class="health-card" id="health-card-git">
+                <div class="health-card-head">
+                  <span class="health-icon">📦</span>
+                  <h5>Git Repository Health</h5>
+                  <span id="health-git-badge" class="badge">Checking...</span>
+                </div>
+                <div class="health-card-body" id="health-git-body">
+                  <div class="health-stat-line"><span>Active Branch:</span> <strong id="health-git-branch">main</strong></div>
+                  <div class="health-stat-line"><span>Working Tree:</span> <strong id="health-git-status">Clean</strong></div>
+                  <div class="health-stat-line"><span>Unpushed Commits:</span> <strong id="health-git-unpushed">0</strong></div>
+                </div>
+              </div>
+
+              <div class="health-card" id="health-card-secrets">
+                <div class="health-card-head">
+                  <span class="health-icon">🛡️</span>
+                  <h5>Secret Leak Guard</h5>
+                  <span id="health-secrets-badge" class="badge">Protected</span>
+                </div>
+                <div class="health-card-body" id="health-secrets-body">
+                  <div class="health-stat-line"><span>Gitignore Guard:</span> <strong id="health-secrets-status">Protected</strong></div>
+                  <div class="health-stat-line"><span>Tracked Secret Files:</span> <strong id="health-secrets-leaked">0 (Safe)</strong></div>
+                  <p class="health-subtext">.env, career_vault/, and credentials.json are strictly shielded from git tracking.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. STUDY FLASHCARDS SUBVIEW -->
+          <div id="lab-subview-flashcards" class="lab-subview hidden">
+            <div class="flashcards-top-row">
+              <div class="fc-filter-wrap">
+                <label for="fc-topic-select">Filter by Topic:</label>
+                <select id="fc-topic-select" name="fc-topic-select" class="drill-select" aria-label="Filter Flashcards by Topic">
+                  <option value="All">All Topics</option>
+                  <option value="General">General</option>
+                  <option value="DevOps">DevOps & Cloud</option>
+                  <option value="Linux">Linux & Systems</option>
+                  <option value="Docker">Docker & Containers</option>
+                </select>
+              </div>
+              <div class="fc-stats-pill" id="fc-stats-pill">0 Flashcards (0 Mastered)</div>
+            </div>
+
+            <div class="flashcard-interactive-container">
+              <div id="flashcard-active-card" class="interactive-flashcard">
+                <div class="fc-front">
+                  <div class="fc-header">
+                    <span id="fc-active-topic" class="badge">Topic</span>
+                    <span id="fc-active-diff" class="fc-diff-pill">Medium</span>
+                  </div>
+                  <div class="fc-question" id="fc-active-question">No flashcards found. Click 'Extract Flashcards' from AI Meeting Notes or generate one!</div>
+                  <button type="button" id="fc-flip-btn" class="mini-btn">Show Answer</button>
+                </div>
+                <div class="fc-back hidden" id="fc-back-section">
+                  <div class="fc-answer-title">Answer:</div>
+                  <div class="fc-answer" id="fc-active-answer">--</div>
+                  <div class="fc-explanation" id="fc-active-explanation">--</div>
+                  <div class="fc-actions-row">
+                    <button type="button" id="fc-mark-mastered-btn" class="primary-btn mini-btn">Mark Mastered</button>
+                    <button type="button" id="fc-mark-review-btn" class="mini-btn">Needs Review</button>
+                    <button type="button" id="fc-next-btn" class="mini-btn">Next Card</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="fc-list-card">
+              <h4>All Saved Study Flashcards</h4>
+              <div id="fc-list-container" class="fc-list-container"></div>
+            </div>
+          </div>
+
+          <!-- 4. LINUX SIMULATOR SUBVIEW -->
+          <div id="lab-subview-sim" class="lab-subview hidden">
+            <div class="practice-terminal-container">
+              <div class="practice-lab-terminal-head">
+                <div class="practice-term-cwd-wrap">
+                  <span class="term-prompt-user">student@vega-sim</span>:<span id="practice-lab-cwd" class="term-prompt-path">/home/student</span>$
+                </div>
+                <div class="practice-term-badges">
+                  <span class="term-badge-sim">SIMULATION</span>
+                  <span class="term-badge-safe">SAFE SANDBOX</span>
+                </div>
+              </div>
+
+              <pre id="practice-lab-output" class="practice-lab-output" tabindex="0" role="region" aria-label="Practice terminal output">Type help for supported commands.</pre>
+
+              <form id="practice-lab-form" class="practice-lab-command-row">
+                <span class="term-prompt-char" aria-hidden="true">$</span>
+                <input id="practice-lab-command" name="practice-lab-command" type="text" maxlength="500" autocomplete="off" spellcheck="false" placeholder="Type a command (ls, pwd, cat README.txt, dnf search httpd, help)..." aria-label="Simulated command input">
+                <button type="submit" id="practice-lab-run" class="practice-btn-run">Run</button>
+                <button id="practice-lab-reset" type="button" class="practice-btn-reset">Reset</button>
+              </form>
+            </div>
+
+            <div class="practice-help-box">
+              <div class="practice-help-title">Supported Commands (In-Memory Simulator):</div>
+              <div class="practice-help-chips">
+                <code>pwd</code>
+                <code>ls [path]</code>
+                <code>cd [path]</code>
+                <code>mkdir &lt;name&gt;</code>
+                <code>touch &lt;file&gt;</code>
+                <code>cat &lt;file&gt;</code>
+                <code>dnf search &lt;query&gt;</code>
+                <code>dnf info &lt;package&gt;</code>
+                <code>dnf list installed</code>
+                <code>dnf install &lt;package&gt;</code>
+                <code>rpm -qi &lt;package&gt;</code>
+                <code>reset</code>
+                <code>help</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- INPUT BOX CONTAINER -->
+      <div id="input-container">
+        <!-- Attached Files Preview Container (Supports multiple screenshots and files) -->
+        <div id="attachment-preview" class="attachment-preview-container hidden">
+          <div id="attachment-pills-list" class="attachment-pills-list"></div>
+          <button id="clear-all-attachments-btn" class="clear-attachments-btn hidden" title="Clear all attachments">Clear all</button>
+        </div>
+
+        <!-- STOP GENERATING BUTTON -->
+        <div id="stop-generation-container" class="hidden">
+          <button id="stop-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+            </svg>
+            <span>Stop generating</span>
+          </button>
+        </div>
+
+        <div class="input-card">
+          <!-- Attach Files / Screenshots (Multiple files and screenshots supported) -->
+          <input type="file" id="file-input" name="file-input" style="display: none;" multiple aria-label="Attach files or screenshots">
+          <button id="attach-btn" title="Attach multiple files or screenshots (Ctrl+V to paste screenshots, or drag & drop)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+          </button>
+
+          <!-- Chat PDF Attach Button (Vega v2.2) -->
+          <input type="file" id="chat-pdf-file-input" name="chat-pdf-file-input" accept=".pdf" style="display: none;" aria-label="Attach PDF document">
+          <button type="button" id="chat-attach-pdf-btn" class="input-tool-btn" title="Attach PDF (Resume / JD / Document)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </button>
+
+          <!-- Prompts Library Button -->
+          <button id="prompts-btn" class="input-tool-btn" title="Prompt library" aria-label="Prompt library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6m-5 3h4m-5-6a7 7 0 1 1 6 0c-.7.5-1 1.1-1 2h-4c0-.9-.3-1.5-1-2Z"/></svg></button>
+
+          <!-- Textarea Input -->
+          <textarea id="prompt-input" name="prompt-input" rows="1" placeholder="Ask Vega anything or give a command (Enter to send, Shift+Enter for a new line)" aria-label="Vega chat input"></textarea>
+
+          <!-- Chat Model Selector Pill (Gemini style) -->
+          <div id="chat-model-picker-wrap" class="model-picker-wrap">
+            <button type="button" id="chat-model-picker-btn" class="model-picker-pill chat-picker-pill" aria-haspopup="true" aria-expanded="false" title="Switch AI model">
+              <span id="chat-model-picker-label">Auto</span>
+              <svg class="model-picker-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="chat-model-dropdown" class="model-picker-dropdown hidden" role="menu"></div>
+          </div>
+
+          <!-- Mic Button -->
+          <button id="mic-btn" title="Click to talk (or press Ctrl+Alt+V from anywhere)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+
+          <!-- Send Button -->
+          <button id="send-btn" title="Send message">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+        <div id="transcription-status" class="transcription-status" role="status" aria-live="polite">Hands-free voice active · auto-sending commands</div>
+        <div id="composer-caption" class="input-caption">Say “Hey Vega” · Talk: Ctrl+Alt+V · Open: Ctrl+Alt+Space</div>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL (DAILY HUB & NEWS) -->
+    <aside id="right-panel" class="collapsed">
+      <div class="panel-header">
+        <button id="close-panel-btn" type="button" class="icon-btn" title="Close Panel" aria-label="Close Daily Hub">&times;</button>
+        <span class="panel-title">Daily Hub & News</span>
+      </div>
+
+      <div class="panel-quick-controls" style="display: flex; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.2);">
+        <button class="badge-toggle-btn listening-toggle-btn on" data-action="toggle-listening" title="Controls microphone listening">
+          <span class="mic-dot"></span>
+          <span class="listening-text">Listening: ON</span>
+        </button>
+        <button class="badge-toggle-btn speaking-toggle-btn on" data-action="toggle-speaking" title="Controls Vega speaking replies">
+          <span class="speak-dot"></span>
+          <span class="speaking-text">Speak: ON</span>
+        </button>
+      </div>
+
+      <div class="panel-tabs">
+        <button class="tab-btn active" data-tab="lablog">Lab Log</button>
+        <button class="tab-btn" data-tab="tech">Tech News</button>
+        <button class="tab-btn" data-tab="internships">Internships</button>
+      </div>
+
+      <div class="panel-content">
+        <!-- TAB 1: LAB LOG -->
+        <div id="tab-lablog" class="tab-pane active">
+          <div class="card-box">
+            <div class="hub-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="hub-label" id="lablog-track-name">LINUX LAB</span>
+                <span class="hub-day-tag" id="lablog-day-tag">Week 1, Day 4</span>
+                <span id="lablog-status-tag" style="font-size:11px;padding:2px 8px;border-radius:10px;background:#1e3a2f;color:#4ade80;font-weight:600;">TODAY</span>
+              </div>
+              <div class="lablog-nav" style="display:flex;align-items:center;gap:6px;">
+                <button id="lablog-prev-btn" class="mini-btn" title="Previous day">◀</button>
+                <button id="lablog-today-btn" class="mini-btn" title="Go to today's lesson">Today</button>
+                <button id="lablog-next-btn" class="mini-btn" title="Next day">▶</button>
+              </div>
+            </div>
+            <div id="lablog-stats-row" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:12px;color:var(--text-muted);">
+              <span id="lablog-streak-badge" style="color:#fbbf24;font-weight:600;">Streak: 4 days</span>
+              <span>•</span>
+              <span id="lablog-progress-text">4 of 168 days done</span>
+              <span id="lablog-date-text" style="margin-left:auto;color:var(--accent);">Friday 02 October</span>
+            </div>
+            <div id="hub-task-text" class="hub-task-title">Files and folders</div>
+            <div id="hub-task-topic" class="hub-task-sub">Linux setup & file system</div>
+
+            <!-- Interactive Steps Checklist -->
+            <div class="steps-container">
+              <div class="steps-title">TODAY'S PRACTICAL STEPS:</div>
+              <div id="hub-steps-list" class="steps-list">
+                <!-- Injected via app.js with checkboxes -->
+              </div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="notes-container">
+              <div class="notes-header">
+                <span class="steps-title">MY LAB NOTES:</span>
+                <button id="save-notes-btn" class="mini-btn">Save notes</button>
+              </div>
+              <textarea id="hub-notes-input" name="hub-notes-input" placeholder="What you executed, what you learned, errors hit..." aria-label="Study notes input"></textarea>
+            </div>
+
+            <!-- AI Assessment & Score -->
+            <div class="assessment-container">
+              <div class="assessment-header">
+                <span class="steps-title">VEGA'S REVIEW:</span>
+                <span id="hub-score-badge" class="score-badge hidden">Score: -/10</span>
+                <button id="assess-log-btn" class="mini-btn accent">Assess my log</button>
+              </div>
+              <div id="hub-review-text" class="review-box">Submit your notes and click 'Assess my log' for Vega's review.</div>
+            </div>
+
+            <button id="open-lablog-full-btn" class="hub-btn">Open Full Lab Log</button>
+          </div>
+        </div>
+
+        <!-- TAB 2: TECH NEWS -->
+        <div id="tab-tech" class="tab-pane">
+          <div class="pane-action-bar">
+            <span>LIVE TECH HEADLINES</span>
+            <button id="refresh-tech-btn" class="mini-btn">Refresh</button>
+          </div>
+          <div id="hub-tech-list" class="news-list">
+            <div class="news-item loading">Loading latest tech headlines...</div>
+          </div>
+        </div>
+
+        <!-- TAB 3: INTERNSHIPS -->
+        <div id="tab-internships" class="tab-pane">
+          <div class="pane-action-bar">
+            <span>LIVE OPENINGS & PORTALS</span>
+            <button id="refresh-internships-btn" class="mini-btn">Refresh</button>
+          </div>
+          <div id="hub-internships-list" class="news-list">
+            <div class="news-item loading">Searching DevOps & Cloud internships...</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Vega Settings</h2>
+        <button id="close-settings-btn" class="icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <div class="setting-title">Brain Mode</div>
+          <div class="segmented-control">
+            <button class="seg-btn active" data-mode="online">Online (Gemini)</button>
+            <button class="seg-btn" data-mode="offline">Offline (Local Qwen)</button>
+            <button class="seg-btn" data-mode="private">Private Mode</button>
+          </div>
+          <div class="setting-hint">Private mode keeps chat on this laptop. Cloud speech and Telegram are separate settings and can still send data online.</div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-title">Agent providers</div>
+          <div class="setting-hint" id="agent-settings-status">Review installation, local connection, and free-use status before sending an agent task.</div>
+          <details class="agent-settings-details">
+            <summary>View all agent statuses</summary>
+            <div id="agent-settings-providers" aria-live="polite"></div>
+          </details>
+          <button id="settings-open-agents" class="mini-btn" type="button">Open Agent workspace</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Voice Output (Speak answers)</div>
+            <div class="setting-hint">Vega speaks her answers out loud</div>
+          </div>
+          <label class="switch" for="voice-toggle-check">
+            <input type="checkbox" id="voice-toggle-check" name="voice-toggle-check" checked aria-label="Toggle voice output">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Wake Word ("Hey Vega")</div>
+            <div class="setting-hint">Listen for wake word in background</div>
+          </div>
+          <label class="switch" for="wake-toggle-check">
+            <input type="checkbox" id="wake-toggle-check" name="wake-toggle-check" checked aria-label="Toggle wake word listening">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Require my voiceprint before waking</div>
+            <div class="setting-hint">Off by default for reliable wake words. Turn on to reject other voices after setting up your voice.</div>
+          </div>
+          <label class="switch" for="wake-only-me-check">
+            <input type="checkbox" id="wake-only-me-check" name="wake-only-me-check" aria-label="Require voiceprint before waking">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Offline speech recognition</div>
+            <div class="setting-hint">Whisper runs on this PC using CPU int8. Microphone audio is not sent to a speech service.</div>
+          </div>
+          <label class="switch" for="cloud-speech-check" title="Online transcription is disabled in local-only mode">
+            <input type="checkbox" id="cloud-speech-check" name="cloud-speech-check" disabled aria-label="Online transcription disabled">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <label for="speech-language-select">Speech language</label>
+          <select id="speech-language-select" name="speech-language-select" class="settings-select" aria-label="Speech language">
+            <option value="auto">Auto detect English / Telugu</option>
+            <option value="english">English</option>
+            <option value="telugu">Telugu / Tenglish</option>
+          </select>
+          <div class="setting-hint">Auto and Telugu modes preserve recognized Telugu and English words in the transcript.</div>
+        </div>
+
+        <div class="setting-group">
+          <label for="persona-mode-select">Persona & Tone Mode</label>
+          <select id="persona-mode-select" name="persona-mode-select" class="settings-select" aria-label="Persona and Tone Mode">
+            <option value="friend">₹0 Friend (Warm, Witty, Conversational Telugu/Tenglish)</option>
+            <option value="pro">Professional AI (Direct, Precise, Concise Engineering)</option>
+          </select>
+          <div class="setting-hint">Friend mode brings playful Telugu banter and deep encouragement; Pro mode stays formal and technical.</div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Interview English Coach Tips</div>
+            <div class="setting-hint">Shows gentle vocabulary & phrasing tips in chat without speaking them out loud</div>
+          </div>
+          <label class="switch" for="coach-toggle-check">
+            <input type="checkbox" id="coach-toggle-check" name="coach-toggle-check" aria-label="Toggle Interview English Coach Tips">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <label for="speech-model-select">Multilingual speech model</label>
+          <select id="speech-model-select" name="speech-model-select" class="settings-select" aria-label="Multilingual speech model">
+            <option value="small">Small · 464 MiB · faster</option>
+            <option value="medium">Medium · 1.43 GiB · slower</option>
+          </select>
+          <div class="setting-hint">Cached local CPU int8 models only. On 3 synthetic Windows TTS English clips (18 reference words), small and medium each scored 5.6% WER; small ran at 1.23× real time and medium at 3.34×. This tiny synthetic check is not a general accuracy benchmark; Telugu accuracy was not measured.</div>
+        </div>
+
+        <div class="setting-group">
+          <label for="speech-rate-slider">Speech Speed (<span id="speed-val">1.0x</span>)</label>
+          <input type="range" id="speech-rate-slider" name="speech-rate-slider" min="0.8" max="1.5" step="0.1" value="1.0" aria-label="Speech Speed slider">
+        </div>
+
+        <!-- Microphone Diagnostic -->
+        <div class="setting-group" style="background:var(--bg-panel);padding:14px;border-radius:8px;border:1px solid var(--border-color);margin-top:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div class="setting-label">Microphone Diagnostic</div>
+              <div class="setting-hint">Record 3s to test sound level & transcription</div>
+            </div>
+            <button id="test-mic-btn" class="mini-btn accent" style="padding:6px 14px;font-size:12px;">Test microphone</button>
+          </div>
+          <div id="test-mic-results" style="display:none;margin-top:8px;padding:8px 12px;background:var(--bg-entry);border-radius:6px;font-size:12px;font-family:monospace;">
+            <div id="test-mic-status" style="color:var(--accent);">Recording 3s... speak now!</div>
+            <div id="test-mic-level" style="margin-top:4px;color:var(--text-muted);"></div>
+            <div id="test-mic-heard" style="margin-top:4px;color:#4ade80;"></div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Just talk (no “Hey Vega”) while my window is in front</div>
+            <div class="setting-hint">Off = she only listens after “Hey Vega” (best with TV, videos or people around)</div>
+          </div>
+          <label class="switch" for="direct-toggle-check">
+            <input type="checkbox" id="direct-toggle-check" name="direct-toggle-check" aria-label="Toggle just talk without wake word">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-group settings-box">
+          <div class="setting-label">PIN and lock</div>
+          <div class="setting-hint">Vega asks for your PIN when she starts and locks herself after no use. Say “Hey Vega” to unlock with your voice.</div>
+          <div class="inline-row">
+            <button id="voice-setup-btn" class="mini-btn"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg> Set up voice unlock</button>
+          </div>
+          <div id="voice-setup-msg" class="setting-hint"></div>
+          <div class="inline-row">
+            <input type="password" id="pin-old" name="pin-old" maxlength="12" placeholder="Current PIN" autocomplete="current-password" aria-label="Current PIN">
+            <input type="password" id="pin-new" name="pin-new" maxlength="12" placeholder="New PIN" autocomplete="new-password" aria-label="New PIN">
+            <input type="password" id="pin-new2" name="pin-new2" maxlength="12" placeholder="New PIN again" autocomplete="new-password" aria-label="Confirm new PIN">
+            <button id="pin-save-btn" class="mini-btn accent">Change PIN</button>
+          </div>
+          <div class="inline-row">
+            <span>Lock after</span>
+            <select id="lock-minutes-select" name="lock-minutes-select" aria-label="Lock after inactivity minutes">
+              <option value="0">Never auto-lock (only when she starts)</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="120">2 hours</option>
+            </select>
+            <span>without use</span>
+          </div>
+          <div class="inline-row" style="margin-top: 6px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;" for="lock-on-start-check">
+              <input type="checkbox" id="lock-on-start-check" name="lock-on-start-check" aria-label="Lock Vega on startup">
+              <span>Lock Vega on startup</span>
+            </label>
+          </div>
+          <div id="pin-msg" class="setting-hint"></div>
+        </div>
+
+        <div class="setting-group settings-box">
+          <div class="setting-label">Keys <span class="setting-hint">(saved only in the .env file on this laptop, never shown again)</span></div>
+          <div class="inline-row">
+            <input type="password" id="gemini-key-input" name="gemini-key-input" placeholder="Paste a new Gemini API key" autocomplete="off" aria-label="Gemini API Key">
+            <button id="gemini-key-save" class="mini-btn accent">Save</button>
+          </div>
+          <div id="gemini-key-status" class="setting-hint"></div>
+          <div class="inline-row">
+            <input type="password" id="telegram-token-input" name="telegram-token-input" placeholder="Paste a new Telegram bot token" autocomplete="off" aria-label="Telegram Bot Token">
+            <button id="telegram-token-save" class="mini-btn accent">Save</button>
+          </div>
+          <div id="telegram-key-status" class="setting-hint"></div>
+        </div>
+
+        <div class="setting-group settings-box">
+          <div class="setting-label">Backup free brains <span class="setting-hint">(used when Gemini is busy or out of free messages, before the laptop model)</span></div>
+          <div class="setting-hint">Each is free with no card. Sign up on their site, make an API key, paste it here. Free plans may use your chats to improve their models; turn on Private mode to keep everything on the laptop.</div>
+          <div class="inline-row"><input type="password" id="groq-key-input" name="groq-key-input" placeholder="Groq key (console.groq.com)" autocomplete="off" aria-label="Groq API Key"><button id="groq-key-save" class="mini-btn accent">Save</button></div>
+          <div id="groq-key-status" class="setting-hint"></div>
+          <div class="inline-row"><input type="password" id="cerebras-key-input" name="cerebras-key-input" placeholder="Cerebras key (cloud.cerebras.ai)" autocomplete="off" aria-label="Cerebras API Key"><button id="cerebras-key-save" class="mini-btn accent">Save</button></div>
+          <div id="cerebras-key-status" class="setting-hint"></div>
+          <div class="inline-row"><input type="password" id="openrouter-key-input" name="openrouter-key-input" placeholder="OpenRouter key (openrouter.ai)" autocomplete="off" aria-label="OpenRouter API Key"><button id="openrouter-key-save" class="mini-btn accent">Save</button></div>
+          <div id="openrouter-key-status" class="setting-hint"></div>
+          <div class="inline-row"><input type="password" id="mistral-key-input" name="mistral-key-input" placeholder="Mistral key (console.mistral.ai)" autocomplete="off" aria-label="Mistral API Key"><button id="mistral-key-save" class="mini-btn accent">Save</button></div>
+          <div id="mistral-key-status" class="setting-hint"></div>
+          <div class="inline-row"><input type="password" id="nvidia-key-input" name="nvidia-key-input" placeholder="NVIDIA key (build.nvidia.com, phone check)" autocomplete="off" aria-label="NVIDIA API Key"><button id="nvidia-key-save" class="mini-btn accent">Save</button></div>
+          <div id="nvidia-key-status" class="setting-hint"></div>
+          <div class="inline-row"><button id="brains-refresh" class="mini-btn">Which brains are ready?</button></div>
+          <div id="brains-list" class="setting-hint"></div>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Start with Windows</div>
+            <div class="setting-hint">Launch Vega automatically at startup</div>
+          </div>
+          <label class="switch" for="startup-toggle-check">
+            <input type="checkbox" id="startup-toggle-check" name="startup-toggle-check" aria-label="Start Vega with Windows">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-btn-row">
+          <button id="create-desktop-shortcut-btn" class="modal-action-btn">Create Desktop Shortcut</button>
+          <button id="open-diary-folder-btn" class="modal-action-btn">Open Diary Folder</button>
+          <button id="open-docs-folder-btn" class="modal-action-btn">Open Documents Folder</button>
+          <button id="lock-vega-btn" class="modal-action-btn" style="background:#2a2333;color:#e8c27a;border:1px solid #e8c27a;"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg> Lock Vega now</button>
+          <button id="run-selftest-btn" class="modal-action-btn" style="background:#1a3a2a;color:#4ade80;border:1px solid #4ade80;">Check everything</button>
+          <button id="open-vega-folder-btn" class="modal-action-btn">Open Vega folder</button>
+          <button id="btn-reset-vega-data" class="modal-action-btn" style="background:#3d1a1a;color:#ff6b6b;border:1px solid #ff6b6b;">Reset All Memory & Data</button>
+          <button id="quit-vega-btn" class="modal-action-btn" style="background:#3a1a1a;color:#f87171;border:1px solid #f87171;">Quit Vega</button>
+        </div>
+        <div id="selftest-results" style="display:none;margin-top:12px;padding:10px;background:#111;border-radius:6px;font-size:12px;font-family:monospace;max-height:200px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL LAB LOG MODAL -->
+  <div id="lablog-modal" class="modal-backdrop hidden">
+    <div class="modal-card wide-modal">
+      <div class="modal-header">
+        <h2>Full Lab Log & Roadmap</h2>
+        <button id="close-lablog-modal-btn" class="icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="track-tab-bar">
+          <button class="track-tab-btn active" data-track="linux">Linux (168 Lessons)</button>
+          <button class="track-tab-btn" data-track="python">Python (36 Lessons)</button>
+          <button class="track-tab-btn" data-track="c">C Programming (24 Lessons)</button>
+        </div>
+        <div id="full-lablog-content" class="full-lablog-body">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMPT LIBRARY MODAL -->
+  <div id="prompts-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Prompt Library</h2>
+        <button id="close-prompts-modal-btn" class="icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="prompts-grid">
+          <div class="prompt-card" data-prompt="Explain this concept step-by-step with simple analogies: ">
+            <div class="prompt-title">Explain Step-by-Step</div>
+            <div class="prompt-desc">Clear breakdown with intuitive analogies.</div>
+          </div>
+          <div class="prompt-card" data-prompt="Review this code for bugs, edge cases, and performance: ">
+            <div class="prompt-title">Code Bug & Security Review</div>
+            <div class="prompt-desc">Inspect code for memory leaks, errors, and fixes.</div>
+          </div>
+          <div class="prompt-card" data-prompt="Ask me 3 realistic technical interview questions about ">
+            <div class="prompt-title">Interview Practice</div>
+            <div class="prompt-desc">Mock interview questions with feedback.</div>
+          </div>
+          <div class="prompt-card" data-prompt="Summarize the key takeaways and actionable commands from: ">
+            <div class="prompt-title">Actionable Summary</div>
+            <div class="prompt-desc">Bullet-point takeaways and commands.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPS & DAILY HUB MODAL -->
+  <div id="daily-hub-modal" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 660px;">
+      <div class="modal-header">
+        <h2>Apps & Daily Hub</h2>
+        <button id="close-daily-hub-btn" class="icon-btn" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="daily-hub-grid">
+          <div class="daily-hub-card" id="daily-lablog" title="Open Lab Log milestone and tasks">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M2 20h20M9 17l-1 3m7-3 1 3"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Lab Log</span>
+              <span class="daily-hub-desc">Curriculum progress & daily milestones</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-agent-tasks" title="Start a separate local-only agent task">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-5 2.2 3.2 3.2 0 0 0 0 5.6A3 3 0 0 0 9 18V4Zm6 0a3 3 0 0 1 5 2.2 3.2 3.2 0 0 1 0 5.6A3 3 0 0 1 15 18V4ZM9 8h6m-6 4h6m-6 4h6"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Agent Tasks</span>
+              <span class="daily-hub-desc">Autonomous local & cloud agent tasks</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-practice-lab" title="Practice commands in an isolated simulator">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6m-5 0v6l-5.3 8.6A2.3 2.3 0 0 0 6.7 21h10.6a2.3 2.3 0 0 0 2-3.4L14 9V3m-5.8 11h11.6M10 7h4"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Practice Lab</span>
+              <span class="daily-hub-desc">Safe in-memory Linux simulator</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-news" title="Top headlines">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 9h8M8 13h8M8 17h5"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Top News</span>
+              <span class="daily-hub-desc">India and global headlines</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-tech" title="Tech and AI news">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 5 13h6l-1 9 9-12h-6l1-8Z"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Tech News</span>
+              <span class="daily-hub-desc">Computing & AI breakthroughs</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-internships" title="DevOps and Cloud internships">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Zm4 2v5c3 3 9 3 12 0v-5m4-2v7"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Internships</span>
+              <span class="daily-hub-desc">Cloud & DevOps career opportunities</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-weather" title="Live weather in Chennai">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M8 1v2m-7 5h2m10-5-1.5 1.5M5 13a4 4 0 0 1 7.5-1.8A4 4 0 1 1 16 18H6a3 3 0 0 1-1-5Z"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Weather</span>
+              <span class="daily-hub-desc">Live forecast and conditions</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-tasks" title="My to-do tasks">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 4h8m-7-2h6v4H9zM5 4H3v18h18V4h-2M7 11h10M7 15h10M7 19h6"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">My Tasks</span>
+              <span class="daily-hub-desc">To-dos & study goals</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-reminders" title="My reminders">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 3 2 6m17-3 3 3M9 2h6"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Reminders</span>
+              <span class="daily-hub-desc">Timers, alarms & clock events</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-diary" title="Personal daily diary">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h15v18H5zM2 3h3v18H2zm7 5h7m-7 4h7m-7 4h5"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">Diary</span>
+              <span class="daily-hub-desc">Daily journal & thoughts</span>
+            </div>
+          </div>
+          <div class="daily-hub-card" id="daily-summaries" title="AI summaries of news, tech, diary, progress">
+            <span class="daily-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h14v17H7zM3 7v14h14M10 8h8m-8 4h8m-8 4h5"/></svg></span>
+            <div class="daily-hub-info">
+              <span class="daily-hub-name">AI Summaries</span>
+              <span class="daily-hub-desc">Digest of tech, news & notes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARIES MODAL -->
+  <div id="summaries-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>AI Summaries</h2>
+        <button id="close-summaries-modal-btn" class="icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="prompts-grid">
+          <div class="prompt-card" id="sum-action-news">
+            <div class="prompt-title"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v17H5zM8 8h8m-8 4h8m-8 4h5"/><path d="M3 7v14"/></svg> Summarize Today's Top News</div>
+            <div class="prompt-desc">India and global headlines summarized concisely.</div>
+          </div>
+          <div class="prompt-card" id="sum-action-tech">
+            <div class="prompt-title"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13h6l-1 9 9-12h-6l1-8Z"/></svg> Summarize Tech Headlines</div>
+            <div class="prompt-desc">AI, Linux, Cloud, and computing developments.</div>
+          </div>
+          <div class="prompt-card" id="sum-action-internships">
+            <div class="prompt-title"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3 3 9 3 12 0v-5m4-2v7"/></svg> Summarize Internship Openings</div>
+            <div class="prompt-desc">Latest Cloud & DevOps opportunities.</div>
+          </div>
+          <div class="prompt-card" id="sum-action-diary">
+            <div class="prompt-title"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h15v18H5zM2 3h3v18H2zm7 5h7m-7 4h7m-7 4h5"/></svg> Summarize Today's Diary</div>
+            <div class="prompt-desc">Friendly recap of what was written today.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM DARK-THEMED CONFIRMATION MODAL -->
+  <div id="confirm-modal" class="modal-backdrop hidden" style="z-index: 10000;">
+    <div class="modal-card confirm-modal-card">
+      <div class="modal-header">
+        <h2 id="confirm-modal-title">Delete Chat</h2>
+        <button id="close-confirm-modal-btn" type="button" class="icon-btn" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="modal-body confirm-modal-body">
+        <p id="confirm-modal-message" class="confirm-modal-message">Are you sure you want to delete this chat? This action cannot be undone.</p>
+        <div class="confirm-modal-actions">
+          <button id="confirm-modal-cancel-btn" type="button" class="confirm-btn-cancel">Cancel</button>
+          <button id="confirm-modal-ok-btn" type="button" class="confirm-btn-danger">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPENING PASSWORD / LOCK SCREEN MODAL (it was stuck inside the hidden Summaries popup, so it never showed) -->
+  <div id="lock-screen-modal" class="modal-backdrop hidden" style="z-index:99999;background:var(--bg-main,#15191F);">
+    <div class="modal-card" style="max-width:380px;text-align:center;padding:36px 28px;background:var(--bg-main,#15191F);border:none;box-shadow:none;">
+      <div style="font-size:32px;font-weight:700;letter-spacing:1px;color:var(--text-ink,#E6EAF0);margin-bottom:8px;">Vega</div>
+      <div style="font-size:14px;color:var(--text-muted,#8C96A3);margin-bottom:24px;">Locked. Enter your PIN.</div>
+      <div style="margin-bottom:16px;">
+        <input type="password" id="lock-pin-input" name="lock-pin-input" maxlength="12" placeholder="••••" autocomplete="current-password" aria-label="Enter PIN to unlock" style="font-size:24px;text-align:center;letter-spacing:8px;padding:10px 14px;border-radius:8px;border:1px solid var(--border-color,#2A313B);background:var(--bg-entry,#1D232B);color:var(--text-ink,#E6EAF0);width:100%;box-sizing:border-box;outline:none;">
+      </div>
+      <button id="lock-unlock-btn" class="modal-action-btn" style="width:100%;padding:12px;font-size:15px;font-weight:600;background:var(--accent,#8AB4F8);color:#15191F;border-radius:8px;border:none;cursor:pointer;margin-bottom:12px;">Unlock</button>
+      <button id="lock-voice-btn" class="modal-action-btn hidden" style="width:100%;padding:10px;font-size:13px;background:var(--bg-panel,#1C2129);color:var(--text-ink,#E6EAF0);border:1px solid var(--border-color,#2A313B);border-radius:8px;cursor:pointer;margin-bottom:8px;">Unlock with my voice</button>
+      <div id="lock-voice-hint" class="hidden" style="font-size:12px;color:var(--text-muted,#8C96A3);margin-bottom:12px;">Or just say “Hey Vega”.</div>
+      <div id="lock-voice-off" class="hidden" style="font-size:12px;color:#FBBF24;margin-bottom:12px;line-height:1.4;"></div>
+      <div id="lock-error-msg" style="font-size:13px;color:#F08A7E;min-height:20px;margin-bottom:14px;"></div>
+      <div style="font-size:11px;color:var(--text-muted,#8C96A3);line-height:1.4;">Reminders and your phone link keep working while I'm locked.</div>
+    </div>
+  </div>
+
+  <script src="api_client.js?v=2.7.0"></script>
+  <script src="lablog.js?v=2.7.0"></script>
+  <script>window.VegaFrontendVersion = "__VEGA_BUILD_VERSION__";</script>
+  <script src="settings.js?v=2.7.0"></script>
+  <script src="app.js?v=2.7.0"></script>
+  <script src="work_mode.js?v=2.7.0"></script>
+  <script src="career.js?v=2.7.0"></script>
+  <script src="hud.js?v=2.7.1"></script>
+  <script src="spec_compiler.js"></script>
+</body>
+</html>

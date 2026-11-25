@@ -1,0 +1,1331 @@
+"""
+Vega's ears and mouth.
+
+Mouth: speaks with the Windows voice (through PowerShell, so it can be stopped).
+Ears:  records from the microphone and turns speech into text with Whisper,
+       all on your laptop. Stops by itself when you stop talking.
+WakeListener: listens in the background for "Hey Vega".
+"""
+
+import sys
+if hasattr(sys, "stdout") and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys, "stderr") and hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
+import difflib
+import os
+import queue
+import re
+import subprocess
+import threading
+import time
+
+import numpy as np
+
+IS_WINDOWS = os.name == "nt"
+NO_WINDOW = 0x08000000 if IS_WINDOWS else 0
+SAMPLE_RATE = 16000
+BLOCK = 1600  # 0.1 second of audio
+
+
+def mic_input_channels(sd, limit=4):
+    """Use the available input channels so stereo/array mics aren't silently read on one dead side."""
+    try:
+        device = sd.default.device[0]
+        info = sd.query_devices(device, "input") if device is not None and int(device) >= 0 else sd.query_devices(kind="input")
+        return max(1, min(int(info.get("max_input_channels", 1) or 1), int(limit)))
+    except Exception:
+        return 1
+
+
+def mono_from_input(indata):
+    """Pick the strongest input channel for this block instead of assuming channel zero has the mic signal."""
+    data = np.asarray(indata, dtype=np.float32)
+    if data.ndim < 2 or data.shape[1] <= 1:
+        return data.reshape(-1).copy()
+    levels = np.sqrt(np.mean(data * data, axis=0))
+    return data[:, int(np.argmax(levels))].copy()
+
+
+def log_problem(message):
+    """Write voice problems to voice_log.txt (in the mybot folder) so they can be checked later."""
+    try:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "voice_log.txt")
+        lines = []
+        if os.path.exists(path):
+            with open(path, encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()[-300:]
+        message = message.replace("\u201c", '"').replace("\u201d", '"').replace("\u2026", "...")  # plain quotes: readable in PowerShell
+        lines.append(time.strftime("%d %b %H:%M:%S  ") + message.replace("\n", " ")[:400] + "\n")
+        with open(path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+    except Exception as e:
+        try:
+            sys.stderr.write(f"log_problem error: {e}\n")
+        except Exception:
+            pass
+
+
+def log_voice_debug(message):
+    """Write diagnostic voice debug events to logs/voice_debug.txt."""
+    try:
+        logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+        os.makedirs(logs_dir, exist_ok=True)
+        path = os.path.join(logs_dir, "voice_debug.txt")
+        msg = str(message).replace("\u201c", '"').replace("\u201d", '"').replace("\u2026", "...").strip()
+        line = time.strftime("[%Y-%m-%d %H:%M:%S] ") + msg + "\n"
+        with open(path, "a", encoding="utf-8", errors="replace") as f:
+            f.write(line)
+            f.flush()
+    except Exception as e:
+        try:
+            sys.stderr.write(f"log_voice_debug error: {e}\n")
+        except Exception:
+            pass
+
+
+def clean_for_speech(text):
+    text = re.sub(r"```.*?```", " (the code is on screen) ", text, flags=re.S)
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"[*_#>|•]", " ", text)
+    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.M)
+    text = text.replace("°C", " degrees").replace("%", " percent").replace("→", " ")
+    # emojis and symbols: don't read them out (and they can break the Windows voice)
+    text = re.sub("[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D\u2B50\u2B55\u2705\u274C]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def shorten_for_speech(text, max_sentences=4, max_chars=450, full_speech=False):
+    """If full_speech is True, speaks the entire explanation without truncating or saying 'The rest is on screen'."""
+    cleaned = clean_for_speech(text)
+    if full_speech:
+        return re.sub(r"\s*(?:the )?rest is on (?:the )?screen\.?", "", cleaned, flags=re.I).strip()
+    parts = re.split(r"(?<=[.!?])\s+", cleaned)
+    out = " ".join(parts[:max_sentences])
+    if len(out) > max_chars:
+        out = out[:max_chars].rsplit(" ", 1)[0] + "."
+    if len(parts) > max_sentences or len(cleaned) > len(out) + 5:
+        out += " The rest is on screen."
+    return out
+
+
+class Mouth:
+    SCRIPT = (
+        "Add-Type -AssemblyName System.Speech;"
+        "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
+        "try { if ($env:VEGA_VOICE -eq 'female') { $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female) } } catch {};"
+        "$s.Rate = [int]$env:VEGA_RATE;"
+        "$s.Speak($env:VEGA_SAY)"
+    )
+
+    def __init__(self, rate=1, voice="female"):
+        self.rate, self.voice = rate, voice
+        self.q = queue.Queue()
+        self.proc = None
+        # Telugu voice: translate the answer to Telugu (Google Translate) and speak it with
+        # Microsoft's free neural Telugu voice. Needs internet; falls back to English if it fails.
+        self.telugu = False
+        self.telugu_voice = "te-IN-ShrutiNeural"
+        self.english_voice = "en-IN-NeerjaNeural"
+        self.on_error = None
+        self._warned = {}
+        self._stop = threading.Event()
+        self.speaking = threading.Event()
+        self.last_spoke = 0.0
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def say(self, text, lang=None):
+        """lang: "te" = Telugu voice, "en" = English voice, None = the current setting."""
+        text = clean_for_speech(text or "")
+        if text:
+            self.q.put((text, lang))
+
+    def stop(self):
+        try:
+            while True:
+                self.q.get_nowait()
+        except queue.Empty:
+            pass
+        self._stop.set()
+        p = self.proc
+        if p and p.poll() is None:
+            p.kill()
+        if IS_WINDOWS:
+            try:
+                import winsound
+                winsound.PlaySound(None, winsound.SND_PURGE)
+            except Exception:
+                pass
+
+    # ---- Telugu translation: several free services, tried one after another
+    _te_cache = {}
+    _blocked = {}  # service -> time until which we don't bother it (it said "too many requests")
+
+    @classmethod
+    def _te_cache_load(cls):
+        if cls._te_cache:
+            return
+        try:
+            import json
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "telugu_cache.json"), encoding="utf-8") as f:
+                cls._te_cache.update(json.load(f))
+        except Exception:
+            pass
+        cls._te_cache.setdefault("", "")
+
+    @classmethod
+    def _te_cache_save(cls):
+        try:
+            import json
+            items = list(cls._te_cache.items())[-400:]  # keep the newest 400 sentences
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "telugu_cache.json"), "w", encoding="utf-8") as f:
+                json.dump(dict(items), f, ensure_ascii=False)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _google_api(text):
+        import requests
+        r = requests.get("https://translate.googleapis.com/translate_a/single",
+                         params={"client": "gtx", "sl": "en", "tl": "te", "dt": "t", "q": text}, timeout=10)
+        if r.status_code == 429:
+            raise RuntimeError("too many requests")
+        r.raise_for_status()
+        return "".join(seg[0] for seg in r.json()[0] if seg and seg[0])
+
+    @staticmethod
+    def _deep_google(text):
+        from deep_translator import GoogleTranslator
+        return GoogleTranslator(source="en", target="te").translate(text)
+
+    @staticmethod
+    def _mymemory(text):
+        import requests
+        r = requests.get("https://api.mymemory.translated.net/get",
+                         params={"q": text[:480], "langpair": "en|te"}, timeout=10)
+        r.raise_for_status()
+        d = r.json()
+        out = (d.get("responseData") or {}).get("translatedText") or ""
+        if d.get("responseStatus") not in (200, "200") or "MYMEMORY WARNING" in out.upper():
+            raise RuntimeError(out or "MyMemory limit reached")
+        return out
+
+    @classmethod
+    def to_telugu(cls, text):
+        """English -> Telugu. Remembers old answers, and if one service is busy, tries the next."""
+        text = text[:1500]
+        cls._te_cache_load()
+        if text in cls._te_cache:
+            return cls._te_cache[text]
+        errors = []
+        for name, fn in (("google", cls._google_api), ("google2", cls._deep_google), ("mymemory", cls._mymemory)):
+            if time.time() < cls._blocked.get(name, 0):
+                continue
+            for attempt in range(2):
+                try:
+                    te = (fn(text) or "").strip()
+                    if te and re.search(r"[\u0C00-\u0C7F]", te):  # really Telugu letters
+                        cls._te_cache[text] = te
+                        cls._te_cache_save()
+                        return te
+                    raise RuntimeError("no Telugu in the answer")
+                except ModuleNotFoundError as e:
+                    errors.append(f"{name}: {e}")
+                    break
+                except Exception as e:
+                    msg = str(e)
+                    if "too many" in msg.lower() or "429" in msg:
+                        cls._blocked[name] = time.time() + 15 * 60  # rest this service for 15 minutes
+                        errors.append(f"{name}: busy")
+                        break
+                    if attempt == 0:
+                        time.sleep(1.0)
+                        continue
+                    errors.append(f"{name}: {msg[:80]}")
+        raise RuntimeError("translation failed (" + "; ".join(errors) + ")")
+
+    def _edge_to_wav(self, text, voice):
+        import asyncio
+        import tempfile
+        import wave
+        import edge_tts
+        import av
+        mp3_fd, mp3 = tempfile.mkstemp(prefix="vega_say_", suffix=".mp3")
+        wav_fd, wav = tempfile.mkstemp(prefix="vega_say_", suffix=".wav")
+        os.close(mp3_fd)
+        os.close(wav_fd)
+        try:
+            # never wait forever for the internet voice (that would block her voice and "Hey Vega")
+            asyncio.run(asyncio.wait_for(edge_tts.Communicate(text, voice).save(mp3), timeout=20))
+            pcm = bytearray()
+            with av.open(mp3) as container:  # mp3 -> wav that Windows can play without extra programs
+                resampler = av.AudioResampler(format="s16", layout="mono", rate=24000)
+                for frame in container.decode(audio=0):
+                    for f in resampler.resample(frame):
+                        pcm += f.to_ndarray().tobytes()
+                for f in resampler.resample(None):
+                    pcm += f.to_ndarray().tobytes()
+            if not pcm:
+                raise RuntimeError("the voice service sent no sound")
+            with wave.open(wav, "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(24000)
+                w.writeframes(bytes(pcm))
+            return wav, len(pcm) / 2 / 24000
+        except Exception:
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
+            raise
+        finally:
+            try:
+                os.remove(mp3)
+            except OSError:
+                pass
+
+    def _play(self, wav, seconds):
+        started = False
+        try:
+            import winsound
+            if self._stop.is_set():
+                return
+            winsound.PlaySound(wav, winsound.SND_FILENAME | winsound.SND_ASYNC)
+            started = True
+            end = time.time() + seconds + 0.2
+            while time.time() < end and not self._stop.is_set():
+                time.sleep(0.1)
+        finally:
+            if started and self._stop.is_set():
+                try:
+                    winsound.PlaySound(None, 0)
+                except Exception:
+                    pass
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
+
+    def _speak_telugu(self, text):
+        """Speak in Telugu. If translation fails, read the English with the Indian English neural voice."""
+        try:
+            te = self.to_telugu(text)
+        except Exception as e:
+            self._warn_once("translate", f"Telugu translation isn't working right now ({e}). "
+                                         "I'll speak English with an Indian voice until it works again.")
+            wav, secs = self._edge_to_wav(text, self.english_voice)
+            self._play(wav, secs)
+            return
+        wav, secs = self._edge_to_wav(te, self.telugu_voice)
+        self._play(wav, secs)
+
+    def _warn_once(self, key, msg):
+        """Show a problem once every 10 minutes, not after every sentence."""
+        if time.time() - self._warned.get(key, 0) > 600:
+            self._warned[key] = time.time()
+            if self.on_error:
+                self.on_error(msg)
+
+    def _speak_windows(self, text):
+        """The built-in Windows voice. If it fails, try Microsoft's online English voice, and say why."""
+        env = dict(os.environ, VEGA_SAY=text[:3000], VEGA_RATE=str(int(self.rate)), VEGA_VOICE=self.voice)
+        self.proc = subprocess.Popen(
+            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", self.SCRIPT],
+            env=env, creationflags=NO_WINDOW, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL)
+        try:
+            _, err = self.proc.communicate(timeout=120)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            return
+        if self._stop.is_set() or self.proc.returncode == 0:
+            return
+        detail = (err or b"").decode("utf-8", "replace").strip().splitlines()
+        detail = detail[0][:160] if detail else f"code {self.proc.returncode}"
+        log_problem(f"windows voice failed: {detail}")
+        try:
+            wav, secs = self._edge_to_wav(text, self.english_voice)
+            self._play(wav, secs)
+        except Exception as e2:
+            self._warn_once("speak", f"The Windows voice didn't work ({detail}), and the online voice didn't either ({str(e2)[:80]}).")
+
+    def test_voice(self):
+        """For the Voice check-up: speak one sentence and report what happened."""
+        if not IS_WINDOWS:
+            return "not Windows"
+        user_name = os.environ.get("VEGA_USER_NAME", "")
+        say_name = f" {user_name}" if user_name else ""
+        env = dict(os.environ, VEGA_SAY=f"Hello{say_name}. This is Vega. Can you hear me?", VEGA_RATE=str(int(self.rate)),
+                   VEGA_VOICE=self.voice)
+        try:
+            r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", self.SCRIPT],
+                               env=env, creationflags=NO_WINDOW, capture_output=True, timeout=60)
+            return "ok" if r.returncode == 0 else ("failed: " + r.stderr.decode("utf-8", "replace").strip()[:300])
+        except Exception as e:
+            return f"failed: {e}"
+
+    def busy(self):
+        """True while speaking, and for a moment after (so the mic doesn't hear Vega)."""
+        return self.speaking.is_set() or (time.time() - self.last_spoke) < 0.8
+
+    def _run(self):
+        while True:
+            item = self.q.get()
+            text, lang = item if isinstance(item, tuple) else (item, None)
+            self.speaking.set()
+            self._stop.clear()
+            try:
+                if IS_WINDOWS and (self.telugu if lang is None else lang == "te"):
+                    try:
+                        self._speak_telugu(text)
+                        continue
+                    except Exception as e:  # no internet, missing part... speak English instead
+                        self._warn_once("voice", f"Couldn't speak Telugu ({str(e)[:160]}), so I spoke English.")
+                if IS_WINDOWS:
+                    self._speak_windows(text)
+            except Exception as e:
+                self._warn_once("speak", f"I couldn't speak: {str(e)[:200]}")
+                log_problem(f"speak failed: {e!r}")
+            finally:
+                self.last_spoke = time.time()
+                if self.q.empty():
+                    self.speaking.clear()
+
+
+def beep(kind="wake"):
+    if IS_WINDOWS:
+        try:
+            import winsound
+            if kind == "wake":
+                winsound.Beep(880, 120)
+            else:
+                winsound.Beep(660, 150)
+                winsound.Beep(880, 150)
+                winsound.Beep(990, 200)
+        except Exception:
+            pass
+
+
+def normalize_audio(audio, target_peak=0.88):
+    """Normalize audio amplitude so faint/quiet speech is clear, distinct, and audible for speech engines."""
+    if not isinstance(audio, np.ndarray) or len(audio) == 0:
+        return audio
+    peak = float(np.max(np.abs(audio)))
+    if peak > 0.005:
+        gain = min(target_peak / peak, 8.0)
+        return np.clip(audio * gain, -1.0, 1.0)
+    return audio
+
+
+class Ears:
+    def __init__(self, model_name="base.en", wake_model_name="base.en"):
+        self.model_name, self.wake_model_name = model_name, wake_model_name
+        self._models = {}
+        self._lock = threading.Lock()
+        self.hint = "Hey Vega."  # names and words to expect; the app fills this in
+        self.hotwords = ""  # names Whisper should prefer (contacts, apps, your words)
+        # Auto/Telugu modes use a cached multilingual model and preserve recognized Telugu/English wording.
+        self.telugu = False
+        self.language_mode = "auto"
+        self.telugu_model_name = "small"
+        self.last_lang = "en"  # the language of the last thing he said
+        # Kept only for settings compatibility. Recognition never sends microphone audio online.
+        # Only what you say AFTER "Hey Vega" or the Mic button is sent; "Hey Vega" itself stays on the laptop.
+        self.cloud = False
+        self._cloud_fails, self._cloud_off_until = 0, 0.0
+
+    def model(self, name):
+        m = self._models.get(name)
+        if m is not None:  # already loaded: don't wait behind another model load
+            return m
+        with self._lock:
+            if name not in self._models:
+                from faster_whisper import WhisperModel
+                # limit the CPU it may use, so the laptop stays smooth (the "Hey Vega" model gets only 2 cores)
+                cores = os.cpu_count() or 4
+                threads = 2 if (name == self.wake_model_name and name != self.main_model_name()) else max(2, min(4, cores // 3))
+                try:
+                    self._models[name] = WhisperModel(name, device="cpu", compute_type="int8",
+                                                      cpu_threads=threads, local_files_only=True)
+                except Exception:
+                    # A model name must resolve from the local Hugging Face cache. Never download one from the microphone path.
+                    raise RuntimeError(f"Local speech model '{name}' is not cached or could not be loaded. No download was attempted.") from None
+            return self._models[name]
+
+    def set_language_mode(self, mode):
+        """Select a local transcription language mode without changing the mic workflow."""
+        if mode not in ("auto", "english", "telugu"):
+            raise ValueError("Choose auto, English, or Telugu speech recognition.")
+        self.language_mode = mode
+        self.telugu = mode in ("auto", "telugu")
+        return self.main_model_name()
+
+    def set_multilingual_model(self, name):
+        """Select a cached CPU model for Telugu and code-switched speech."""
+        if name not in ("small", "medium"):
+            raise ValueError("Choose the cached small or medium multilingual Whisper model.")
+        self.telugu_model_name = name
+        return self.main_model_name()
+
+    def main_model_name(self):
+        return self.telugu_model_name if self.language_mode in ("auto", "telugu") else self.model_name
+
+    def _words(self, source, fast=False, prompt=None):
+        if fast:  # wake word: always the small English model
+            try:
+                segments, _ = self.model(self.wake_model_name).transcribe(
+                    source, language="en", vad_filter=True, beam_size=2,
+                    initial_prompt=prompt or "Hey Vega. Hi Vega. Okay Vega.",
+                    vad_parameters={"min_silence_duration_ms": 400, "speech_pad_ms": 200})
+            except TypeError:
+                segments, _ = self.model(self.wake_model_name).transcribe(
+                    source, language="en", vad_filter=True, beam_size=2,
+                    initial_prompt=prompt or "Hey Vega. Hi Vega. Okay Vega.")
+            # On clicks, taps or scrolling (no real talking) Whisper often just repeats its hint "Hey Vega".
+            # Its own numbers say when it's guessing: drop those parts.
+            kept = []
+            for s in segments:
+                nsp = float(getattr(s, "no_speech_prob", 0) or 0)
+                alp = float(getattr(s, "avg_logprob", 0) or 0)
+                if nsp > 0.60 or alp < -1.0:
+                    log_problem(f"wake: dropped a guess “{s.text.strip()[:40]}” (no speech {nsp:.2f}, sure {alp:.2f})")
+                    continue
+                kept.append(s.text.strip())
+            return " ".join(kept).strip()
+        elif self.language_mode in ("auto", "telugu"):  # preserve code-switching and technical terms in the recognized text
+            # Restrict Whisper strictly to Telugu (te) or English (en) to prevent 99-language multilingual drift (Spanish/Korean)
+            lang = "te" if self.language_mode == "telugu" else "en"
+            segments, info = self._run_model(self.telugu_model_name, source, task="transcribe", language=lang, prompt=prompt)
+            det = getattr(info, "language", lang)
+            self.last_lang = "te" if det == "te" else "en"
+        else:
+            segments, _ = self._run_model(self.model_name, source, language="en", prompt=prompt)
+            self.last_lang = "en"
+        return " ".join(s.text.strip() for s in segments).strip()
+
+    def _run_model(self, name, source, task="transcribe", language=None, prompt=None):
+        """Careful settings for commands: bigger search, names as 'hotwords', no carrying over old text."""
+        kw = dict(task=task, vad_filter=True, beam_size=5, initial_prompt=prompt or self.hint,
+                  condition_on_previous_text=False, without_timestamps=True,
+                  vad_parameters={"min_silence_duration_ms": 700, "speech_pad_ms": 300})
+        if language:
+            kw["language"] = language
+        elif self.language_mode == "telugu":
+            kw["language"] = "te"
+        else:
+            kw["language"] = "en"
+        if self.hotwords and not prompt:
+            kw["hotwords"] = self.hotwords
+        model = self.model(name)
+        for drop in ((), ("hotwords",), ("hotwords", "vad_parameters", "without_timestamps")):
+            try:  # older faster-whisper versions don't know every option
+                segs, info = model.transcribe(source, **{k: v for k, v in kw.items() if k not in drop})
+                # Filter hallucinated segments: Whisper reports how sure it is.
+                # no_speech_prob > 0.60: the model is saying "I heard nothing real here".
+                # avg_logprob < -1.1: the model is guessing (low confidence). Drop these.
+                kept = []
+                for s in segs:
+                    nsp = float(getattr(s, "no_speech_prob", 0) or 0)
+                    alp = float(getattr(s, "avg_logprob", 0) or 0)
+                    if nsp > 0.60 or alp < -1.1:
+                        log_problem(f"cmd: dropped hallucination \"{s.text.strip()[:50]}\" "
+                                    f"(no_speech={nsp:.2f}, logprob={alp:.2f})")
+                        continue
+                    txt = s.text.strip()
+                    try:
+                        from voice.friend_voice import is_silence_hallucination
+                        if is_silence_hallucination(txt):
+                            log_problem(f"cmd: dropped silence/script hallucination \"{txt[:50]}\"")
+                            continue
+                    except Exception:
+                        pass
+                    kept.append(s)
+                return kept, info
+            except TypeError:
+                continue
+        return model.transcribe(source, task=task, **({"language": language} if language else {}))
+
+    def cloud_ready(self):
+        # Speech recognition remains offline even if an old config file says cloud_speech=true.
+        return False
+
+    def google(self, audio, timeout=7):
+        """Compatibility stub: audio is never sent to an online speech service."""
+        return None
+
+    def transcribe_command(self, audio, prompt=None, timeout=25):
+        """Turn a spoken command into text with the cached local model; never download one.
+        If the main speech model isn't ready yet, use the "Hey Vega" model (English) for now."""
+        if audio is None or (isinstance(audio, np.ndarray) and len(audio) < SAMPLE_RATE * 0.2):
+            return ""
+        name = self.main_model_name()
+        if name not in self._models and self.language_mode == "english":
+            log_problem(f"command: main model '{name}' not ready yet, using '{self.wake_model_name}' for now")
+            use_fast = True
+        else:
+            use_fast = False
+        out = {}
+
+        def work():
+            try:
+                clean_audio = normalize_audio(audio)
+                if use_fast:
+                    segments, _ = self.model(self.wake_model_name).transcribe(
+                        clean_audio, language="en", beam_size=5, vad_filter=True, initial_prompt=prompt or self.hint)
+                    out["text"] = " ".join(s.text.strip() for s in segments).strip()
+                    self.last_lang = "en"
+                else:
+                    out["text"] = self._words(clean_audio, False, prompt)
+            except Exception as e:
+                import traceback
+                out["error"] = e
+                log_problem("command transcribe error: " + traceback.format_exc().replace("\n", " | ")[-600:])
+
+        t0 = time.time()
+        t = threading.Thread(target=work, daemon=True)
+        t.start()
+        t.join(timeout)
+        if t.is_alive():
+            log_problem(f"command: transcribing took over {timeout}s with '{name}', gave up")
+            return ""
+        log_problem(f"command text ({time.time() - t0:.1f}s, {'fast' if use_fast else name}): “{out.get('text', '')[:100]}”")
+        cmd_text = out.get("text", "")
+        if cmd_text:
+            try:
+                from voice.friend_voice import is_silence_hallucination
+                if is_silence_hallucination(cmd_text):
+                    log_problem(f"command: dropped silence/script hallucination “{cmd_text[:50]}”")
+                    return ""
+            except Exception:
+                pass
+            log_voice_debug(f"Transcription (Whisper command): '{cmd_text}'")
+        return cmd_text
+
+    def transcribe(self, audio, fast=False, prompt=None):
+        clean_audio = normalize_audio(audio) if isinstance(audio, np.ndarray) else audio
+        res = self._words(clean_audio, fast, prompt)
+        if res:
+            log_voice_debug(f"Transcription ({'Whisper-fast' if fast else 'Whisper'}): '{res}'")
+        return res
+
+    def transcribe_file(self, path):
+        return self._words(path)
+
+    def listen_once(self, stop_event=None, max_seconds=20, silence=1.8, wait_seconds=7):
+        """Record until you stop talking (or press the mic again). Returns audio or None."""
+        import sounddevice as sd
+        blocks = queue.Queue()
+
+        def cb(indata, frames, t, status):
+            blocks.put(mono_from_input(indata))
+
+        audio, started, quiet, noise = [], False, 0.0, None
+        begin = time.time()
+        with sd.InputStream(samplerate=SAMPLE_RATE, channels=mic_input_channels(sd), dtype="float32", blocksize=BLOCK, callback=cb):
+            while True:
+                if stop_event is not None and stop_event.is_set():
+                    break
+                try:
+                    b = blocks.get(timeout=0.5)
+                except queue.Empty:
+                    continue
+                rms = float(np.sqrt(np.mean(b ** 2)))
+                if noise is None:
+                    noise = rms
+                # Use 1.6x noise floor (not 2.0x) so first syllable is never clipped.
+                # Minimum 0.003 (slightly lower than before) for sensitive detection.
+                threshold = max(noise * 1.6, 0.0030)
+                if not started:
+                    noise = 0.92 * noise + 0.08 * rms if rms < threshold else noise
+                    # Keep 1.2s of pre-roll audio (12 blocks) so the first word is never clipped
+                    audio = (audio + [b])[-12:]
+                    if rms > threshold:
+                        started = True
+                    elif time.time() - begin > wait_seconds:
+                        return None
+                    continue
+                audio.append(b)
+                quiet = quiet + 0.1 if rms < threshold else 0.0
+                if quiet >= silence or len(audio) * 0.1 >= max_seconds:
+                    break
+        if not started or len(audio) < 2:
+            return None
+        return np.concatenate(audio)
+
+
+# Extended list of phrases Whisper hallucinates from ambient noise, background music, TV etc.
+WHISPER_HALLUCINATIONS = {
+    "", "you", "thank you", "thanks", "thank you so much", "thank you very much", "thanks for watching",
+    "thank you for watching", "bye", "okay bye", "good bye", "goodbye", "good night",
+    "see you", "see you next time", "see you later", "take care", "have a good day",
+    "have a nice day", "have a great day", "stay safe", "god bless you", "god bless",
+    "gracias", "de nada", "muchas gracias", "de vega que se les muro",
+    "subtitles by", "subtitles by the amara.org community",
+    "please subscribe", "subscribe", "like and subscribe", "hit the bell", "hit the bell icon",
+    "don't forget to subscribe", "smash the like button", "the end",
+    "music", "background music", "music playing",
+    "i love you", "i love you too", "love you", "love you too",
+    "yes", "no", "yeah", "okay", "ok", "hmm", "uh", "um", "ah", "oh", "mm",
+    "all right", "alright", "right", "sure", "cool", "great", "awesome",
+    "well done", "good job", "nice", "perfect", "excellent", "good",
+    "sorry", "excuse me", "pardon", "hello", "hi", "hey", "howdy",
+    "what", "what the", "oh my god", "oh my goodness", "oh wow",
+    "done", "okay done", "that's it", "that is it", "got it", "got you",
+    "no problem", "no worries", "never mind", "never",
+    "so", "well", "anyway", "you know", "i mean", "i know",
+}
+
+
+def drop_filler(text):
+    """What Whisper 'hears' in near-silence or background noise is not a command.
+    Drops common hallucinations, YouTube-style phrases, and single-word noise."""
+    if not text:
+        return ""
+    try:
+        from voice.friend_voice import is_silence_hallucination
+        if is_silence_hallucination(text):
+            return ""
+    except Exception:
+        pass
+    t = re.sub(r"[^a-z' ]", "", (text or "").lower()).strip()
+    # Drop if it exactly matches a known hallucination
+    if t in WHISPER_HALLUCINATIONS:
+        return ""
+    # Drop very short clips (1 word): almost never a real command, usually noise
+    if len(t.split()) == 1 and t not in {"yes", "no", "stop", "mute", "unmute", "pause",
+                                          "next", "back", "play", "news", "weather",
+                                          "screenshot", "battery", "lock", "diary", "vega"}:
+        return ""
+    return text
+
+
+WAKE_WORDS = {"vega", "wega", "vegas", "veega", "vaiga", "vayga", "vaga", "weiga", "vegah", "veiga", "baega", "bega",
+              "vegha", "waiga", "weega", "wiga", "viga", "vayega", "vaigha", "bhega", "beiga", "vegaa", "wegah",
+              "rekha", "reka", "rayka", "raika", "reikha", "sega", "smart rekha"}
+GREETINGS = {"hey", "hi", "hay", "hei", "hai", "ok", "okay", "hello", "hye", "heyy", "hii",
+             "here", "hear", "hair", "heya", "hiya"}  # in an Indian accent "Hey" is often heard as "Here"
+# How Whisper hears YOUR whole "Hey Vega" when it has no hint (from the log: "Here we go."). Teach adds more.
+PLAIN_PHRASES = {"here we go", "hear we go", "hey we go", "hi we go", "here vega", "hey vega", "hi vega",
+                 "hey rekha", "hi rekha", "rekha", "reka", "hey reka", "hi reka", "smart rekha", "smart tracker",
+                 "sega", "hey sega"}
+LEARNED = set()  # how Whisper hears YOUR "Vega" (from Menu -> Teach me your "Hey Vega")
+FILLERS = GREETINGS | {"a", "the", "oh", "uh", "um", "hmm"}
+NOT_WAKE = {"we", "the", "they", "hey", "very", "wait", "way", "what", "where", "when", "we're", "vegan", "vague", "baby",
+            "bigger", "begin", "began", "maybe", "okay", "yeah", "yes", "hello", "hi", "ok", "vegetable", "vegetables",
+            "veg", "big", "bag", "beg", "wake", "weekend", "week", "vehicle", "video", "via", "view", "welcome", "well",
+            "good", "go", "get", "give", "guys", "bro", "bye", "you", "i", "it", "is", "to", "me", "and", "a", "an",
+            "so", "no", "now", "not", "but", "be", "by", "we'll", "he", "she", "her", "his", "was", "were", "will",
+            # names / words that woke her by mistake in the voice log
+            "vivek", "vikas", "google", "yoga", "weaker", "vigour", "vigor", "figure", "beta", "better"}
+
+
+BLOCKED = set()  # words that woke her by mistake ("That wasn't for you")
+
+
+def is_sleep_phrase(text):
+    """Use the shared Whisper-tolerant sleep-command matcher."""
+    from voice.friend_voice import is_sleep_phrase as match_sleep_phrase
+    return match_sleep_phrase(text)
+
+
+def enter_sleep_if_command(text):
+    """Set persistent sleep state for a command accepted by the shared matcher."""
+    if not is_sleep_phrase(text):
+        return False
+    from voice.friend_voice import set_sleep_state
+    set_sleep_state(True)
+    return True
+
+
+def prompt_echo(text):
+    """Whisper repeating its own hint back ("Hey Vega. Hi Vega. Okay Vega.") = it heard no real words."""
+    words = re.findall(r"[a-z']+", (text or "").lower())
+    if not words:
+        return True
+    wake_count = sum(1 for w in words if w in WAKE_WORDS or w in LEARNED)
+    if wake_count >= 2:
+        return True
+    joined = " ".join(words)
+    if "hi vega" in joined and ("okay vega" in joined or "ok vega" in joined or "hi vega" in joined.replace("hi vega", "", 1)):
+        return True
+    if len(words) >= 3 and all(w in (WAKE_WORDS | GREETINGS | FILLERS | LEARNED) for w in words):
+        return True
+    return False
+
+
+def _norm(text):
+    return " ".join(re.findall(r"[a-z']+", (text or "").lower()))
+
+
+# Without a hint, your "Vega" often comes out as "we go" / "you go" ("Here we go.", "Hey, there you go.")
+_WE_GO = re.compile(r"^(?:(?:hey|hi|here|hear|ok|okay|hai|hay|hello)\s+)?(?:there\s+)?(?:we|you|ve|wee|v|be|vee)\s+go\b")
+
+
+def plain_phrase_match(text):
+    """Does the no-hint listen sound exactly like how YOU say "Hey Vega"?"""
+    t = _norm(text)
+    return any(t == p or t.startswith(p + " ") for p in PLAIN_PHRASES) or (len(t.split()) <= 5 and bool(_WE_GO.match(t)))
+
+
+def wake_word_in(text):
+    """The word that sounded like 'Vega' (so a mistake can be blocked)."""
+    for w in re.findall(r"[a-z']+", (text or "").lower())[:4]:
+        if w not in GREETINGS and w not in FILLERS:
+            return w
+    return ""
+
+
+def good_wake_variant(w):
+    """Only words that sound like 'Vega' can be learned as your wake word."""
+    w = (w or "").lower().strip()
+    return 3 <= len(w) <= 8 and w not in NOT_WAKE and w not in BLOCKED and (_sim(w, "vega") >= 0.5 or (w[:1] in "vwbf" and _sim(w, "vega") >= 0.4))
+
+
+def _sim(a, b):
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+
+def is_system_command(text: str) -> bool:
+    """Detects if text is a system/PC control command like opening apps, controlling volume, etc."""
+    if not text:
+        return False
+    t_clean = text.lower().strip()
+    patterns = [
+        r"^(?:open|launch|start|run|close|quit|exit|kill)\s+.+",
+        r"^(?:set|put|make|turn|switch)?\s*(?:the\s+)?(?:volume|sound|brightness|wifi|bluetooth|radios?).*",
+        r"^(?:mute|unmute|louder|quieter|max volume|full volume|min volume).*",
+        r"^(?:take|capture)?\s*(?:a\s+)?(?:screenshot|screen grab|screen capture).*",
+        r"^(?:shut ?down|restart|reboot|sleep|hibernate|lock)\s*(?:the|my|this)?\s*(?:laptop|pc|computer|system)?.*",
+        r"^(?:play|pause|stop|resume|next|previous)\s*(?:the\s+)?(?:track|song|music|media|video)?.*"
+    ]
+    return any(re.match(p, t_clean) for p in patterns)
+
+
+def find_wake(text, loose=False):
+    """If the text STARTS with "Hey Vega" (or "Vega"), return what came after it ('' if nothing). Else None.
+    Strict on purpose: the name must be the first word, or come right after hey / hi / ok,
+    so normal talking in the room doesn't wake her."""
+    t = _norm(text)
+    for p in sorted(PLAIN_PHRASES, key=len, reverse=True):
+        if t == p:
+            return ""
+        if t.startswith(p + " "):
+            return t[len(p) + 1:].strip()
+    words = re.findall(r"[a-z']+", text.lower())
+    if any(w in BLOCKED for w in words[:3]):
+        return None
+    known = (WAKE_WORDS | LEARNED) - BLOCKED
+    if loose:  # "very easy": a Vega-like word in the first 3 words, but only after hey / hi / ok / uh
+        for i, w in enumerate(words[:3]):
+            if i and any(p not in FILLERS for p in words[:i]):
+                break  # "I told mega..." - she's in the middle of a sentence, not being called
+            if w in NOT_WAKE or len(w) < 3:
+                continue
+            if w in known or _sim(w, "vega") >= 0.6 or max((_sim(w, k) for k in known), default=0) >= 0.65 or \
+                    (len(w) > 5 and w[:3] in ("hey", "hai", "hay") and _sim(w[3:], "vega") >= 0.55):
+                return " ".join(words[i + 1:])
+    for i, w in enumerate(words[:2]):
+        if i == 1 and words[0] not in GREETINGS:
+            break
+        if w in NOT_WAKE:
+            continue
+        if w in known or _sim(w, "vega") >= 0.8:
+            return " ".join(words[i + 1:])
+        if i == 1 and max((_sim(w, k) for k in known), default=0) >= 0.75:
+            return " ".join(words[i + 1:])
+        # "hey vega" heard as one word, e.g. "heyvega" / "haivega"
+        if len(w) > 5 and w[:3] in ("hey", "hai", "hay") and _sim(w[3:], "vega") >= 0.75:
+            return " ".join(words[i + 1:])
+    return None
+
+
+def learn_wake_words(heard_list):
+    """From recordings of 'Hey Vega', pick out the word Whisper heard for 'Vega'. Returns the new words."""
+    new = set()
+    for heard in heard_list:
+        words = re.findall(r"[a-z']+", (heard or "").lower())
+        for i, w in enumerate(words[:4]):
+            if w in GREETINGS:
+                continue
+            if good_wake_variant(w):
+                new.add(w)
+            break
+    return new
+
+
+# Event callbacks for real-time frontend synchronization (WebSocket / SSE)
+_wake_event_subscribers = []
+
+
+def subscribe_wake_event(callback):
+    """Subscribe a callback to wake events (e.g., WebSocket/SSE broadcaster)."""
+    if callback not in _wake_event_subscribers:
+        _wake_event_subscribers.append(callback)
+
+
+def push_wake_event(event_dict=None):
+    """Immediately push wake event to all subscribers (WebSocket / UI)."""
+    payload = event_dict or {"type": "wake_word_detected"}
+    for cb in list(_wake_event_subscribers):
+        try:
+            cb(payload)
+        except Exception as e:
+            log_problem(f"push_wake_event failed: {e}")
+
+
+class WakeListener(threading.Thread):
+    """
+    Listens all the time for "Hey Vega". Uses the small Whisper model on short bits of sound.
+    on_wake()          -> called when she hears her name (show "Yes?")
+    on_command(text)   -> called with what you said after her name
+    is_busy()          -> True while Vega is speaking or thinking (then she doesn't listen)
+    """
+
+    def __init__(self, ears, on_wake, on_command, is_busy, on_error=None):
+        super().__init__(daemon=True)
+        self.ears, self.on_wake, self.on_command, self.is_busy, self.on_error = ears, on_wake, on_command, is_busy, on_error
+        self.strictness = "normal"  # "strict", "normal" or "easy" (Settings -> Hey Vega sensitivity)
+        self.auto_send = True       # Hands-free auto-send enabled for voice commands
+        self.on_near_miss = None    # called with what was heard when it *almost* heard "Hey Vega"
+        self.on_status = None       # shows "Understanding…" while working on a command
+        self.voice_score = None     # voice_score(audio) -> (score, strong, low) or None (set by the app)
+        self.direct = lambda: False  # True while Vega's window is open in front: just talk, no "Hey Vega" needed
+        self.last_wake = ("", 0.0)  # what woke her last, and when (for "That wasn't for you")
+        self.prev_wake = ("", 0.0)
+        self.enabled = threading.Event()
+        self.paused = threading.Event()
+        self._stream_lock = threading.Lock()
+        self._stream_open = False
+        self._stream_closed = threading.Event()
+        self._stream_closed.set()
+
+    def pause_for_capture(self, timeout=2.0):
+        """Pause the always-on stream and wait until PortAudio releases the mic for a one-shot capture."""
+        self.paused.set()
+        with self._stream_lock:
+            active = self._stream_open
+        return not active or self._stream_closed.wait(timeout)
+
+    def resume_after_capture(self):
+        self.paused.clear()
+
+    def notify_wake(self, audio=None):
+        """Dispatches wake_word_detected event to frontend (WebSocket / SSE) and invokes on_wake callback."""
+        try:
+            from voice.friend_voice import set_sleep_state
+            set_sleep_state(False)
+        except Exception:
+            pass
+        push_wake_event({"type": "wake_word_detected"})
+        if hasattr(self, "on_wake_event") and callable(self.on_wake_event):
+            try:
+                self.on_wake_event({"type": "wake_word_detected"})
+            except Exception:
+                pass
+        if self.on_wake:
+            try:
+                self.on_wake(audio)
+            except Exception as e:
+                log_problem(f"on_wake error: {e}")
+
+    def status(self, text):
+        if self.on_status:
+            try:
+                self.on_status(text)
+            except Exception:
+                pass
+
+    @staticmethod
+    def drop_backlog(blocks):
+        """If checking took a while and sound piled up (fan, TV, people talking), skip the old sound
+        so Vega never falls behind and "gets stuck"."""
+        if blocks.qsize() > 15:
+            keep = []
+            try:
+                while True:
+                    keep.append(blocks.get_nowait())
+            except queue.Empty:
+                pass
+            for b in keep[-3:]:
+                blocks.put(b)
+
+    def second_check_ok(self, text):
+        """The second listen, WITHOUT the "Hey Vega" hint (that hint makes Whisper imagine "Vega" in any noise).
+        Every level does it now. 'strict' needs the name clearly; 'normal' a word close to Vega at the start;
+        'easy' / 'very easy' accept a word that is only a bit like Vega."""
+        if self.strictness == "strict":
+            return False
+        if plain_phrase_match(text):
+            return True
+        easy = self.strictness in ("easy", "very_easy")
+        words = [w for w in re.findall(r"[a-z']+", (text or "").lower())[:4] if w not in FILLERS]
+        known = (WAKE_WORDS | LEARNED) - BLOCKED
+        s1, s2 = (0.62, 0.72) if easy else (0.70, 0.80)
+        return any(w not in NOT_WAKE and w not in BLOCKED and len(w) >= 3 and
+                   (_sim(w, "vega") >= s1 or max((_sim(w, k) for k in known), default=0) >= s2)
+                   for w in words[:3 if easy else 2])
+
+    def decide(self, audio, second_ok, heard, again=""):
+        """Two clues together: did the second listen sound like "Vega", and does the voice sound like the owner?
+        - clearly your voice            -> yes (even if the second listen was unclear: your accent is fine)
+        - a bit like you + said "Vega"  -> yes
+        - not your voice (video, call, someone else, clicks) -> no"""
+        got = None
+        if self.voice_score:
+            try:
+                got = self.voice_score(audio)
+            except Exception as e:
+                log_problem(f"wake voice check failed ({e}), using the listen only")
+        first_wake = find_wake(heard, loose=(self.strictness in ("easy", "very_easy"))) is not None
+        if not got:
+            # Don't discard a clear primary wake-word hit just because the independent check was silent.
+            ok = first_wake or second_ok
+            reason = f"first_wake={first_wake}, second_ok={second_ok}, no voice check"
+            log_voice_debug(f"Wake decision: {'WOKE' if ok else 'IGNORED'} - text='{heard}', second='{(again or '')[:30]}' - {reason}")
+            log_problem(f"wake: second listen heard \"{(again or '')[:40]}\" -> {'OK' if ok else 'not Vega'} "
+                        f"(no voice check) -> {'WAKE' if ok else 'ignored'}")
+            return ok
+        score, strong, low = got[:3]
+        enforce = got[3] if len(got) > 3 else True
+        if not enforce:
+            ok = first_wake or second_ok
+        else:
+            ok = (score >= strong and (first_wake or second_ok)) or (first_wake and second_ok and score >= low)
+        reason = f"first_wake={first_wake}, second_ok={second_ok}, voice_score={score:.2f} (strong={strong:.2f}, low={low:.2f}, enforce={enforce})"
+        log_voice_debug(f"Wake decision: {'WOKE' if ok else 'IGNORED'} - text='{heard}', second='{(again or '')[:30]}' - {reason}")
+        log_problem(f"wake: “{heard[:40]}” voice {score:.2f} (you >= {strong:.2f}, maybe >= {low:.2f}), "
+                    f"second listen \"{(again or '')[:30]}\" {'OK' if second_ok else 'not Vega'} -> {'WAKE' if ok else 'ignored'}")
+        return ok
+
+    JUNK = {"you", "hmm", "um", "uh", "ah", "oh", "mm", "thank you", "thanks for watching", "bye", "the", "and", "so",
+            "yeah", "yes", "okay", "ok", "it's", "that's it", "thank you bye", "hello", "hi", "hey",
+            "no", "no problem", "never mind", "never", "sorry", "alright", "all right", "right", "sure",
+            "cool", "great", "nice", "good", "done", "got it", "love you", "i love you",
+            "oh my god", "oh my goodness", "what the", "see you", "take care", "good night",
+            "i know", "i mean", "you know", "well", "anyway", "so yeah", "oh yeah"}
+
+    def direct_command(self, audio, loud_secs=1.0):
+        """Window open: no 'Hey Vega' needed. Still ignores clicks, typing noise, one-word mumbles and other voices."""
+        if loud_secs < 0.8:  # click, tap, key, or short noise, not a command
+            return
+
+        # Check overall audio RMS energy - reject pure silence / ambient hum
+        try:
+            overall_rms = float(np.sqrt(np.mean(audio ** 2)))
+            if overall_rms < 0.005:
+                return
+        except Exception:
+            pass
+
+        # Check if mic is owned by HUD tab or Vega is speaking or in 1000ms cooldown
+        try:
+            vw = sys.modules.get("vega_webview") or sys.modules.get("__main__")
+            if vw:
+                _MIC_OWNER = getattr(vw, "_MIC_OWNER", "")
+                mouth = getattr(vw, "mouth", None)
+                S = getattr(vw, "S", {})
+                if _MIC_OWNER in ("hud", "tts"):
+                    return
+                if (mouth and mouth.busy()) or (time.time() - S.get("last_spoke", 0.0) < 1.0):
+                    return
+        except Exception:
+            pass
+
+        # Check if Silent / Sleep mode is active: ignore ambient chatter unless wake word is spoken
+        try:
+            from voice.friend_voice import is_sleeping, is_hey_vega_phrase, set_sleep_state
+            if is_sleeping():
+                quick = _norm(self.ears.transcribe(audio[:int(SAMPLE_RATE * 5)], fast=True, prompt=None))
+                if is_hey_vega_phrase(quick):
+                    set_sleep_state(False)
+                    beep("wake")
+                    self.notify_wake(audio)
+                return
+        except Exception:
+            pass
+
+        # Pause listening while media is playing or user is on a call
+        try:
+            from vega_control import is_media_playing, other_app_using_mic
+            if is_media_playing():
+                log_problem("direct: ignored because media is playing (YouTube, video, music)")
+                return
+            if other_app_using_mic():
+                log_problem("direct: ignored because another app is using mic (call, Meet, Zoom)")
+                return
+        except Exception:
+            pass
+        # Always run a quick cheap pre-filter first (fast=True uses the small wake-word model).
+        # This avoids sending every background sound to the full command model or to Google.
+        quick = _norm(self.ears.transcribe(audio[:int(SAMPLE_RATE * 5)], fast=True, prompt=None))
+        wake_chimed = find_wake(quick, loose=True) is not None
+        if wake_chimed:
+            beep("wake")
+        if len(quick.split()) < 2 or quick in self.JUNK:
+            # Background noise, music, or ambient chatter: definitely not a command
+            return
+        try:
+            from voice.friend_voice import is_silence_hallucination
+            if is_silence_hallucination(quick):
+                return
+        except Exception:
+            pass
+        g = None
+        if self.ears.cloud_ready():
+            # Compatibility branch only: cloud_ready() stays false for offline recognition.
+            g = self.ears.google(audio)
+            if g == "":  # Google heard NO human words - don't bother Whisper
+                log_problem("direct: google heard no words (ambient noise), ignoring")
+                return
+        text = g if g else self.ears.transcribe_command(audio)
+        t = _norm(text)
+        if not t or t in self.JUNK:
+            return
+        # Also drop if it matches known Whisper hallucinations
+        if t in {_norm(h) for h in WHISPER_HALLUCINATIONS if h}:
+            log_problem(f"direct: dropped hallucination: '{t[:60]}'")
+            return
+        try:
+            from voice.friend_voice import is_silence_hallucination
+            if is_silence_hallucination(text):
+                log_problem(f"direct: dropped silence/script hallucination: '{text[:60]}'")
+                return
+        except Exception:
+            pass
+        # Check sleep mode state
+        try:
+            from voice.friend_voice import is_sleeping, is_hey_vega_phrase, is_sleep_phrase
+            if is_sleep_phrase(text):
+                enter_sleep_if_command(text)
+                self.on_command(text, audio)
+                return
+            if is_sleeping():
+                if not is_hey_vega_phrase(text):
+                    log_problem(f"direct: in sleep mode and wake phrase not found in \"{text[:50]}\", ignoring")
+                    return
+        except Exception:
+            pass
+        # If the user said "Hey Vega", "Vega", "Rekha", or another wake word variant:
+        cmd = find_wake(text, loose=True)
+        if cmd is not None:  # text contained a wake greeting
+            text = cmd
+            if not cmd or _norm(cmd) in self.JUNK:  # user just said "Hey Vega" or "Rekha" to greet Vega
+                if not wake_chimed:
+                    beep("wake")
+                self.notify_wake(audio)
+                return
+        else:
+            # Check if text is just a wake name or greeting variant without command
+            words = re.findall(r"[a-z']+", text.lower())
+            if len(words) <= 2 and all(w in (WAKE_WORDS | GREETINGS | FILLERS | LEARNED) for w in words):
+                if not wake_chimed:
+                    beep("wake")
+                self.notify_wake(audio)
+                return
+        if self.voice_score:
+            try:
+                got = self.voice_score(audio)
+            except Exception as e:
+                got = None
+                log_problem(f"direct: voice check failed ({e}), allowing it")
+            if got:
+                score, strong, low = got[:3]
+                need = max(low, 0.22)
+                if (got[3] if len(got) > 3 else True) and score < need:
+                    log_problem(f"direct: \"{text[:50]}\" voice {score:.2f} < {need:.2f} -> not you, ignored")
+                    return
+        log_problem(f"direct (window open): \"{text[:80]}\"")
+        self.prev_wake, self.last_wake = self.last_wake, (text, time.time())
+        self.on_command(text, audio)
+
+    def near_miss(self, first, second):
+        if self.on_near_miss:
+            try:
+                self.on_near_miss(first, second)
+            except Exception:
+                pass
+
+    def set_enabled(self, on):
+        (self.enabled.set if on else self.enabled.clear)()
+
+    def run(self):
+        import sounddevice as sd
+        while True:  # no internet the first time? keep trying every 30 s instead of going deaf until a restart
+            try:
+                self.ears.model(self.ears.wake_model_name)
+                break
+            except Exception as e:
+                log_problem(f"wake model not ready ({e}), trying again in 30 s")
+                if self.on_error and not getattr(self, "_told_model", False):
+                    self._told_model = True
+                    self.on_error(f"Couldn't load the wake-word model yet ({e}). I'll keep trying. Check your internet.")
+                time.sleep(30)
+        while True:
+            if not self.enabled.is_set() or self.paused.is_set():
+                time.sleep(0.3)
+                continue
+            blocks = queue.Queue()
+
+            def cb(indata, frames, t, status):
+                blocks.put(mono_from_input(indata))
+
+            with self._stream_lock:
+                if not self.enabled.is_set() or self.paused.is_set():
+                    continue
+                self._stream_open = True
+                self._stream_closed.clear()
+
+            stream_failed = False
+            try:
+                try:
+                    dev_idx = sd.default.device[0]
+                    dev_info = sd.query_devices(dev_idx)
+                    channels = mic_input_channels(sd)
+                    log_voice_debug(f"Microphone opened: device [{dev_idx}] '{dev_info['name']}', channels={channels} (strongest channel), samplerate={SAMPLE_RATE}")
+                except Exception as ex:
+                    channels = mic_input_channels(sd)
+                    log_voice_debug(f"Microphone device query: {ex}")
+                log_voice_debug("listener started")
+                with sd.InputStream(samplerate=SAMPLE_RATE, channels=channels, dtype="float32", blocksize=BLOCK, callback=cb):
+                    self._loop(blocks)
+            except Exception as e:
+                import traceback
+                log_problem("listener error: " + traceback.format_exc().replace("\n", " | ")[-800:])
+                log_voice_debug(f"Listener error: {e}")
+                if self.on_error:
+                    self.on_error(f"Listening problem: {e}")
+                stream_failed = True
+            finally:
+                with self._stream_lock:
+                    self._stream_open = False
+                    self._stream_closed.set()
+            if stream_failed:
+                time.sleep(3)
+
+    def _loop(self, blocks):
+        noise, seg, quiet, pre, loud = None, [], 0.0, [], 0
+        waiting_for_command_until = 0.0
+        wake_audio = None
+        last_level_log = 0.0
+        while self.enabled.is_set() and not self.paused.is_set():
+            try:
+                b = blocks.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            if self.is_busy():
+                seg, quiet, pre = [], 0.0, []
+                continue
+            rms = float(np.sqrt(np.mean(b ** 2)))
+            noise = rms if noise is None else noise
+            # 1.6x noise floor: catches first syllable earlier without too many false positives
+            threshold = max(noise * 1.6, 0.0030)
+            now = time.time()
+            if now - last_level_log >= 1.0:
+                last_level_log = now
+                log_voice_debug(f"Live sound level: RMS={rms:.5f}, noise_floor={noise:.5f}, threshold={threshold:.5f}")
+            if not seg:
+                if rms > threshold:
+                    seg = pre[-12:] + [b]  # keep 1.2s pre-roll so first word start is preserved
+                    quiet = 0.0
+                    loud = 1
+                else:
+                    noise = 0.95 * noise + 0.05 * rms
+                    pre = (pre + [b])[-14:]
+                    if waiting_for_command_until and time.time() > waiting_for_command_until:
+                        waiting_for_command_until = 0.0
+                continue
+            seg.append(b)
+            quiet = quiet + 0.1 if rms < threshold else 0.0
+            loud = loud + (1 if rms >= threshold else 0)
+            direct = self.direct()
+            cmd_mode = bool(waiting_for_command_until) or direct  # whole sentences, with small pauses
+            long_enough = len(seg) * 0.1 >= (15 if cmd_mode else 12)
+            if quiet < (1.8 if cmd_mode else 0.8) and not long_enough:
+                continue
+            audio = np.concatenate(seg)
+            seg, quiet, pre = [], 0.0, []
+            if len(audio) < SAMPLE_RATE * 0.3:
+                continue
+            if waiting_for_command_until:
+                waiting_for_command_until = 0.0
+                try:
+                    from voice.friend_voice import is_sleeping
+                    vw = sys.modules.get("vega_webview") or sys.modules.get("__main__")
+                    _mic_owner = getattr(vw, "_MIC_OWNER", "") if vw else ""
+                    _mouth = getattr(vw, "mouth", None) if vw else None
+                    _S = getattr(vw, "S", {}) if vw else {}
+                    if is_sleeping() or _mic_owner in ("hud", "tts") or (_mouth and _mouth.busy()) or (time.time() - _S.get("last_spoke", 0.0) < 1.0):
+                        continue
+                except Exception:
+                    pass
+                self.status("Understanding…")
+                text = self.ears.transcribe_command(audio)
+                if not text:
+                    self.status("")
+                if text:
+                    try:
+                        from voice.friend_voice import is_silence_hallucination
+                        if is_silence_hallucination(text):
+                            self.status("")
+                            continue
+                    except Exception:
+                        pass
+                    # give the voice check the "Hey Vega" part too: more of your voice = a surer match
+                    both = np.concatenate([wake_audio, audio]) if wake_audio is not None else audio
+                    self.on_command(text, both)
+                continue
+            if direct:  # Vega's window is open in front: anything he says is for her
+                self.direct_command(audio, loud * 0.1)
+                continue
+            if blocks.qsize() > 100:  # far behind (the laptop was busy): old sound is useless, start fresh
+                self.drop_backlog(blocks)
+            if time.time() - getattr(self, "_last_check", 0) < 0.8:  # at most ~1 check a second
+                continue
+            self._last_check = time.time()
+            # only the first 2.5 seconds can hold "Hey Vega", so check just that part: much faster
+            heard = self.ears.transcribe(audio[:int(SAMPLE_RATE * 2.5)], fast=True)
+            loose = self.strictness in ("easy", "very_easy")
+            rest = find_wake(heard, loose=loose) if heard else None
+            if heard:
+                log_problem(f"heard: “{heard[:80]}” -> {'WAKE' if rest is not None else 'ignored'} ({self.strictness})")
+            if rest is None:
+                self.drop_backlog(blocks)  # not for Vega: skip sound that piled up meanwhile
+                continue
+            try:
+                from voice.friend_voice import is_hey_vega_phrase, is_sleeping
+                if is_sleeping() and not is_hey_vega_phrase(heard):
+                    self.drop_backlog(blocks)
+                    continue
+            except Exception:
+                pass
+            if prompt_echo(heard):
+                log_problem(f"wake: ignored “{heard[:60]}” (only the hint repeated back = no real words)")
+                continue
+            # Give immediate feedback on the first wake-word hit, before any slower full-command pass.
+            beep("wake")
+            if len(rest.split()) >= 2:
+                # "Hey Vega, what's the weather": hear it again with the better model, with NO wake-word hint
+                self.status("Understanding…")
+                text = self.ears.transcribe_command(audio, prompt=self.ears.hint.replace("Hey Vega", "").strip(" ,.") or ".")
+                cmd = find_wake(text, loose=loose) if text else None
+                second_ok = cmd is not None or (bool(text) and self.second_check_ok(text))
+                if not self.decide(audio, second_ok, heard, text):
+                    self.status("")
+                    self.near_miss(heard, text)
+                    continue
+                self.prev_wake, self.last_wake = self.last_wake, (heard, time.time())
+                push_wake_event({"type": "wake_word_detected"})
+                self.on_command(cmd if cmd and len(cmd.split()) >= 2 else rest, audio)
+            else:
+                again = self.ears.transcribe(audio[:int(SAMPLE_RATE * 2.5)], fast=True, prompt="Vega.")
+                second_ok = find_wake(again, loose=loose) is not None or self.second_check_ok(again)
+                if not self.decide(audio, second_ok, heard, again):
+                    self.near_miss(heard, again)
+                    continue
+                self.prev_wake, self.last_wake = self.last_wake, (heard, time.time())
+                wake_audio = audio
+                self.notify_wake(audio)
+                waiting_for_command_until = time.time() + 8

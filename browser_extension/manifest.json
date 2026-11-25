@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Vega Scam Shield & Job Ingester",
+  "version": "1.0.0",
+  "description": "1-Click capture of job postings from LinkedIn, Internshala, Naukri, and ATS portals into Vega Career Workbench.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:47632/*",
+    "http://localhost:47632/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Vega Scam Shield"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

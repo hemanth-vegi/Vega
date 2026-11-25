@@ -1,0 +1,42 @@
+# Git & Version Control
+.git
+.gitignore
+.github
+
+# Virtual Environments
+.venv
+venv
+env
+ENV
+
+# Secrets & Vaults (STRICTLY GUARDED)
+.env
+.env.*
+*.env
+career_vault/
+career_vault
+
+# SQLite Databases & Backups
+*.db
+*.sqlite
+*.sqlite3
+
+# Python Caches & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Browser Extension & Zips
+browser_extension/
+*.zip
+
+# Logs & Debugging
+*.log
+vega_error.log
+debug_vega.log
+
+# Build Artifacts
+dist/
+build/
+*.egg-info/

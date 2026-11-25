@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "browser_extension",
+    "__pycache__",
+    "*.bak",
+    "archive",
+]
+
+[tool.ruff.lint]
+select = [
+    "E9",   # Syntax & runtime errors
+    "F",    # Pyflakes (undefined variables, unused imports, etc.)
+]
+ignore = [
+    "F403", # 'from module import *' used; unable to detect undefined names
+    "F405", # name may be undefined, or defined from star imports
+    "F841", # local variable is assigned to but never used
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
